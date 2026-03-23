@@ -25,7 +25,7 @@ param(
 $RED = "`e[31m"
 $GREEN = "`e[32m"
 $YELLOW = "`e[33m"
-$BLUE = "`e[34m"
+ = "`e[34m"
 $NC = "`e[0m"
 
 # Log function
@@ -36,7 +36,7 @@ function Write-Log {
         "INFO"  { Write-Host "$GREEN[INFO]$NC $Message" }
         "WARN"  { Write-Host "$YELLOW[WARN]$NC $Message" }
         "ERROR" { Write-Host "$RED[ERROR]$NC $Message" }
-        "DEBUG" { if ($Debug) { Write-Host "$BLUE[DEBUG]$NC $Message" } }
+        "DEBUG" { if ($Debug) { Write-Host "[DEBUG]$NC $Message" } }
     }
 }
 
@@ -180,9 +180,9 @@ function Stop-CursorProcess {
 # Main function
 function Main {
     Write-Host ""
-    Write-Host "$BLUE========================================$NC"
-    Write-Host "$BLUE   Cursor Hook Injection Tool (Windows)$NC"
-    Write-Host "$BLUE========================================$NC"
+    Write-Host "========================================$NC"
+    Write-Host "   Cursor Hook Injection Tool (Windows)$NC"
+    Write-Host "========================================$NC"
     Write-Host ""
 
     # Get Cursor main.js path

@@ -7,7 +7,7 @@ $ESC = [char]27
 $RED = "$ESC[31m"
 $GREEN = "$ESC[32m"
 $YELLOW = "$ESC[33m"
-$BLUE = "$ESC[34m"
+ = "$ESC[34m"
 $NC = "$ESC[0m"
 
 # Try to resize terminal window to 120x40 (cols x rows) on startup; silently ignore if not supported/failed to avoid affecting main script flow
@@ -87,13 +87,13 @@ function Get-FolderPathSafe {
     if ([string]::IsNullOrWhiteSpace($path)) {
         Write-Host "$YELLOW⚠️  [Path]$NC $Label cannot be resolved, will try other methods"
     } else {
-        Write-Host "$BLUEℹ️  [Path]$NC ${Label}: $path"
+        Write-Host "ℹ️  [Path]$NC ${Label}: $path"
     }
     return $path
 }
 
 function Initialize-CursorPaths {
-    Write-Host "$BLUEℹ️  [Path]$NC Starting to resolve Cursor-related paths..."
+    Write-Host "ℹ️  [Path]$NC Starting to resolve Cursor-related paths..."
     $global:CursorAppDataRoot = Get-FolderPathSafe `
         -SpecialFolder ([System.Environment+SpecialFolder]::ApplicationData) `
         -EnvVarName "APPDATA" `
@@ -109,7 +109,7 @@ function Initialize-CursorPaths {
         $global:CursorUserProfileRoot = [Environment]::GetEnvironmentVariable("USERPROFILE")
     }
     if (-not [string]::IsNullOrWhiteSpace($global:CursorUserProfileRoot)) {
-        Write-Host "$BLUEℹ️  [Path]$NC User directory: $global:CursorUserProfileRoot"
+        Write-Host "ℹ️  [Path]$NC User directory: $global:CursorUserProfileRoot"
     }
     $global:CursorAppDataDir = if ($global:CursorAppDataRoot) { Join-Path $global:CursorAppDataRoot "Cursor" } else { $null }
     $global:CursorLocalAppDataDir = if ($global:CursorLocalAppDataRoot) { Join-Path $global:CursorLocalAppDataRoot "Cursor" } else { $null }
@@ -221,7 +221,7 @@ function Resolve-CursorInstallPath {
         return $global:CursorInstallPath
     }
 
-    Write-Host "$BLUE🔎 [Path]$NC Detecting Cursor installation directory..."
+    Write-Host "🔎 [Path]$NC Detecting Cursor installation directory..."
     $candidates = @()
     if ($global:CursorLocalAppDataRoot) {
         $candidates += (Join-Path $global:CursorLocalAppDataRoot "Programs\Cursor")
@@ -237,7 +237,7 @@ function Resolve-CursorInstallPath {
 
     $regCandidates = @(Get-CursorInstallPathFromRegistry)
     if ($regCandidates.Count -gt 0) {
-        Write-Host "$BLUEℹ️  [Path]$NC Found candidate paths from registry: $($regCandidates -join '; ')"
+        Write-Host "ℹ️  [Path]$NC Found candidate paths from registry: $($regCandidates -join '; ')"
         $candidates += $regCandidates
     }
 
@@ -257,7 +257,7 @@ function Resolve-CursorInstallPath {
         if (-not $candidate) {
             continue
         }
-        Write-Host "$BLUE⏳ [Path]$NC ($attempt/$totalCandidates) Trying installation path: $candidate"
+        Write-Host "⏳ [Path]$NC ($attempt/$totalCandidates) Trying installation path: $candidate"
         if (Test-CursorInstallPath -Path $candidate) {
             $global:CursorInstallPath = $candidate
             Write-Host "$GREEN✅ [Found]$NC Found Cursor installation path: $candidate"
@@ -375,8 +375,8 @@ function Find-JsMatchingBraceEnd {
 # Plan C: Loader Stub + external Hook - main/shared process only loads external Hook file
 function Modify-CursorJSFiles {
     Write-Host ""
-    Write-Host "$BLUE🔧 [Core Modification]$NC Starting to modify Cursor core JS files to bypass device identification..."
-    Write-Host "$BLUE💡 [Solution]$NC Using enhanced triple solution: placeholder replacement + b6 fixed-point rewrite + Loader Stub + external Hook"
+    Write-Host "🔧 [Core Modification]$NC Starting to modify Cursor core JS files to bypass device identification..."
+    Write-Host "💡 [Solution]$NC Using enhanced triple solution: placeholder replacement + b6 fixed-point rewrite + Loader Stub + external Hook"
     Write-Host ""
 
     # Windows Cursor application path (supports auto-detection + manual fallback)
@@ -491,7 +491,7 @@ function Modify-CursorJSFiles {
     # Support overriding download nodes via environment variable (comma-separated)
     if ($env:CURSOR_HOOK_DOWNLOAD_URLS) {
         $hookDownloadUrls = $env:CURSOR_HOOK_DOWNLOAD_URLS -split '\s*,\s*' | Where-Object { $_ }
-        Write-Host "$BLUEℹ️  [Hook]$NC Detected custom download node list, will prioritize"
+        Write-Host "ℹ️  [Hook]$NC Detected custom download node list, will prioritize"
     }
     if ($hookSourcePath) {
         try {
@@ -502,7 +502,7 @@ function Modify-CursorJSFiles {
         }
     }
     if (-not (Test-Path $hookTargetPath)) {
-        Write-Host "$BLUEℹ️  [Hook]$NC Downloading external Hook for device identifier interception..."
+        Write-Host "ℹ️  [Hook]$NC Downloading external Hook for device identifier interception..."
         $originalProgressPreference = $ProgressPreference
         $ProgressPreference = 'Continue'
         try {
@@ -513,7 +513,7 @@ function Modify-CursorJSFiles {
                 for ($i = 0; $i -lt $totalUrls; $i++) {
                     $url = $hookDownloadUrls[$i]
                     $attempt = $i + 1
-                    Write-Host "$BLUE⏳ [Hook]$NC ($attempt/$totalUrls) Current download node: $url"
+                    Write-Host "⏳ [Hook]$NC ($attempt/$totalUrls) Current download node: $url"
                     try {
                         Invoke-WebRequest -Uri $url -OutFile $hookTargetPath -UseBasicParsing -ErrorAction Stop
                         Write-Host "$GREEN✅ [Hook]$NC External Hook downloaded online: $hookTargetPath"
@@ -544,14 +544,14 @@ function Modify-CursorJSFiles {
     $modifiedCount = 0
 
     # Close Cursor process
-    Write-Host "$BLUE🔄 [Close]$NC Closing Cursor process for file modification..."
+    Write-Host "🔄 [Close]$NC Closing Cursor process for file modification..."
     Stop-AllCursorProcesses -MaxRetries 3 -WaitSeconds 3 | Out-Null
 
     # Create backup directory
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
     $backupPath = "$cursorAppPath\resources\app\out\backups"
 
-    Write-Host "$BLUE💾 [Backup]$NC Creating Cursor JS file backup..."
+    Write-Host "💾 [Backup]$NC Creating Cursor JS file backup..."
     try {
         New-Item -ItemType Directory -Path $backupPath -Force | Out-Null
 
@@ -578,7 +578,7 @@ function Modify-CursorJSFiles {
                 Write-Host "$GREEN✅ [Backup]$NC Original backup created successfully: $fileName"
             } else {
                 # Restore from original backup to ensure clean injection each time
-                Write-Host "$BLUE🔄 [Restore]$NC Restoring from original backup: $fileName"
+                Write-Host "🔄 [Restore]$NC Restoring from original backup: $fileName"
                 Copy-Item $fileOriginalBackup $file -Force
             }
         }
@@ -597,7 +597,7 @@ function Modify-CursorJSFiles {
     }
 
     # Modify JS files (re-inject each time since restored from original backup)
-    Write-Host "$BLUE🔧 [Modify]$NC Starting to modify JS files (using device identifiers)..."
+    Write-Host "🔧 [Modify]$NC Starting to modify JS files (using device identifiers)..."
 
     foreach ($file in $jsFiles) {
         if (-not (Test-Path $file)) {
@@ -605,7 +605,7 @@ function Modify-CursorJSFiles {
             continue
         }
 
-        Write-Host "$BLUE📝 [Process]$NC Processing: $(Split-Path $file -Leaf)"
+        Write-Host "📝 [Process]$NC Processing: $(Split-Path $file -Leaf)"
 
         try {
             $content = Get-Content $file -Raw -Encoding UTF8
@@ -682,7 +682,7 @@ function Modify-CursorJSFiles {
 
                     $hashRegex = [regex]::new('createHash\(["'']sha256["'']\)')
                     $hashMatches = $hashRegex.Matches($windowText)
-                    Write-Host "   $BLUEℹ️  $NC [Plan B Diagnostics] id.js offset=$markerIndex | sha256 createHash hits=$($hashMatches.Count)"
+                    Write-Host "   ℹ️  $NC [Plan B Diagnostics] id.js offset=$markerIndex | sha256 createHash hits=$($hashMatches.Count)"
                     $patched = $false
                     $diagLines = @()
                     # Compatibility: In PowerShell expandable strings, "$var:" is parsed as scope/drive prefix, use "${var}" to clarify variable boundaries
@@ -737,7 +737,7 @@ function Modify-CursorJSFiles {
                         $absEnd = $markerIndex + $endBrace
                         $content = $content.Substring(0, $absStart) + $replacement + $content.Substring($absEnd + 1)
 
-                        Write-Host "   $BLUEℹ️  $NC [Plan B Diagnostics] Hit candidate#${candidateNo}: $fn($param) len=$($funcText.Length)"
+                        Write-Host "   ℹ️  $NC [Plan B Diagnostics] Hit candidate#${candidateNo}: $fn($param) len=$($funcText.Length)"
                         Write-Host "   $GREEN✓$NC [Plan B] Rewrote $fn($param) machine code source function (fusion feature matching)"
                         $replacedB6 = $true
                         $patched = $true
@@ -747,7 +747,7 @@ function Modify-CursorJSFiles {
                     if (-not $patched) {
                         Write-Host "   $YELLOW⚠️  $NC [Plan B] Machine code source function features not located, skipped"
                         foreach ($d in ($diagLines | Select-Object -First 3)) {
-                            Write-Host "      $BLUEℹ️  $NC [Plan B Diagnostics] $d"
+                            Write-Host "      ℹ️  $NC [Plan B Diagnostics] $d"
                         }
                     }
                 } catch {
@@ -837,12 +837,12 @@ try {
     if ($modifiedCount -gt 0) {
         Write-Host ""
         Write-Host "$GREEN🎉 [Complete]$NC Successfully modified $modifiedCount JS files"
-        Write-Host "$BLUE💾 [Backup]$NC Original file backup location: $backupPath"
-        Write-Host "$BLUE💡 [Note]$NC Using enhanced triple solution:"
+        Write-Host "💾 [Backup]$NC Original file backup location: $backupPath"
+        Write-Host "💡 [Note]$NC Using enhanced triple solution:"
         Write-Host "   • Plan A: someValue placeholder replacement (stable anchor, cross-version compatible)"
         Write-Host "   • Plan B: b6 fixed-point rewrite (machine code source function)"
         Write-Host "   • Plan C: Loader Stub + external Hook (cursor_hook.js)"
-        Write-Host "$BLUE📁 [Config]$NC ID config file: $idsConfigPath"
+        Write-Host "📁 [Config]$NC ID config file: $idsConfigPath"
         return $true
     } else {
         Write-Host "$RED❌ [Failed]$NC No files were successfully modified"
@@ -855,7 +855,7 @@ try {
 function Remove-CursorTrialFolders {
     Write-Host ""
     Write-Host "$GREEN🎯 [Core Feature]$NC Executing Cursor trial reset folder deletion..."
-    Write-Host "$BLUE📋 [Note]$NC This feature will delete specified Cursor-related folders to reset trial status"
+    Write-Host "📋 [Note]$NC This feature will delete specified Cursor-related folders to reset trial status"
     Write-Host ""
 
     # Define folder paths to delete
@@ -881,7 +881,7 @@ function Remove-CursorTrialFolders {
     $foldersToDelete += $adminPaths
     $foldersToDelete += $currentUserPaths
 
-    Write-Host "$BLUE📂 [Check]$NC Will check the following folders:"
+    Write-Host "📂 [Check]$NC Will check the following folders:"
     foreach ($folder in $foldersToDelete) {
         Write-Host "   📁 $folder"
     }
@@ -893,7 +893,7 @@ function Remove-CursorTrialFolders {
 
     # Delete specified folders
     foreach ($folder in $foldersToDelete) {
-        Write-Host "$BLUE🔍 [Check]$NC Checking folder: $folder"
+        Write-Host "🔍 [Check]$NC Checking folder: $folder"
 
         if (Test-Path $folder) {
             try {
@@ -925,7 +925,7 @@ function Remove-CursorTrialFolders {
         Write-Host "$GREEN🎉 [Complete]$NC Cursor trial reset folder deletion complete!"
 
         # 🔧 Pre-create necessary directory structure to avoid permission issues
-        Write-Host "$BLUE🔧 [Fix]$NC Pre-creating necessary directory structure to avoid permission issues..."
+        Write-Host "🔧 [Fix]$NC Pre-creating necessary directory structure to avoid permission issues..."
 
         $cursorAppData = $global:CursorAppDataDir
         $cursorLocalAppData = $global:CursorLocalAppDataDir
@@ -972,7 +972,7 @@ function Restart-CursorAndWait {
         return $false
     }
 
-    Write-Host "$BLUE📍 [Path]$NC Using path: $cursorPath"
+    Write-Host "📍 [Path]$NC Using path: $cursorPath"
 
     if (-not (Test-Path $cursorPath)) {
         Write-Host "$RED❌ [Error]$NC Cursor executable does not exist: $cursorPath"
@@ -1024,7 +1024,7 @@ function Restart-CursorAndWait {
             Start-Sleep -Seconds 5
         } else {
             Write-Host "$YELLOW⚠️  [Warning]$NC Config file not generated within expected time"
-            Write-Host "$BLUE💡 [Tip]$NC May need to manually start Cursor once to generate config file"
+            Write-Host "💡 [Tip]$NC May need to manually start Cursor once to generate config file"
         }
 
         # Force close Cursor
@@ -1043,7 +1043,7 @@ function Restart-CursorAndWait {
 
     } catch {
         Write-Host "$RED❌ [Error]$NC Failed to restart Cursor: $($_.Exception.Message)"
-        Write-Host "$BLUE💡 [Debug]$NC Error details: $($_.Exception.GetType().FullName)"
+        Write-Host "💡 [Debug]$NC Error details: $($_.Exception.GetType().FullName)"
         return $false
     }
 }
@@ -1055,7 +1055,7 @@ function Stop-AllCursorProcesses {
         [int]$WaitSeconds = 5
     )
 
-    Write-Host "$BLUE🔒 [Process Check]$NC Checking and closing all Cursor-related processes..."
+    Write-Host "🔒 [Process Check]$NC Checking and closing all Cursor-related processes..."
 
     # Define all possible Cursor process names
     $cursorProcessNames = @(
@@ -1069,7 +1069,7 @@ function Stop-AllCursorProcesses {
     )
 
     for ($retry = 1; $retry -le $MaxRetries; $retry++) {
-        Write-Host "$BLUE🔍 [Check]$NC Process check $retry/$MaxRetries..."
+        Write-Host "🔍 [Check]$NC Process check $retry/$MaxRetries..."
 
         $foundProcesses = @()
         foreach ($processName in $cursorProcessNames) {
@@ -1091,7 +1091,7 @@ function Stop-AllCursorProcesses {
         foreach ($process in $foundProcesses) {
             try {
                 $process.CloseMainWindow() | Out-Null
-                Write-Host "$BLUE  • Graceful close: $($process.ProcessName) (PID: $($process.Id))$NC"
+                Write-Host "  • Graceful close: $($process.ProcessName) (PID: $($process.Id))$NC"
             } catch {
                 Write-Host "$YELLOW  • Graceful close failed: $($process.ProcessName)$NC"
             }
@@ -1130,7 +1130,7 @@ function Test-FileAccessibility {
         [string]$FilePath
     )
 
-    Write-Host "$BLUE🔐 [Permission Check]$NC Checking file access permissions: $(Split-Path $FilePath -Leaf)"
+    Write-Host "🔐 [Permission Check]$NC Checking file access permissions: $(Split-Path $FilePath -Leaf)"
 
     if (-not (Test-Path $FilePath)) {
         Write-Host "$RED❌ [Error]$NC File does not exist"
@@ -1190,11 +1190,11 @@ function Invoke-CursorInitialization {
     $folderToCleanContents = Join-Path -Path $BASE_PATH -ChildPath "History"
     $folderToDeleteCompletely = Join-Path -Path $BASE_PATH -ChildPath "workspaceStorage"
 
-    Write-Host "$BLUE🔍 [Debug]$NC Base path: $BASE_PATH"
+    Write-Host "🔍 [Debug]$NC Base path: $BASE_PATH"
 
     # Delete specified files
     foreach ($file in $filesToDelete) {
-        Write-Host "$BLUE🔍 [Check]$NC Checking file: $file"
+        Write-Host "🔍 [Check]$NC Checking file: $file"
         if (Test-Path $file) {
             try {
                 Remove-Item -Path $file -Force -ErrorAction Stop
@@ -1210,7 +1210,7 @@ function Invoke-CursorInitialization {
     }
 
     # Clear specified folder contents
-    Write-Host "$BLUE🔍 [Check]$NC Checking folder to clear: $folderToCleanContents"
+    Write-Host "🔍 [Check]$NC Checking folder to clear: $folderToCleanContents"
     if (Test-Path $folderToCleanContents) {
         try {
             Get-ChildItem -Path $folderToCleanContents -Recurse | Remove-Item -Force -Recurse -ErrorAction Stop
@@ -1225,7 +1225,7 @@ function Invoke-CursorInitialization {
     }
 
     # Completely delete specified folder
-    Write-Host "$BLUE🔍 [Check]$NC Checking folder to delete: $folderToDeleteCompletely"
+    Write-Host "🔍 [Check]$NC Checking folder to delete: $folderToDeleteCompletely"
     if (Test-Path $folderToDeleteCompletely) {
         try {
             Remove-Item -Path $folderToDeleteCompletely -Recurse -Force -ErrorAction Stop
@@ -1246,7 +1246,7 @@ function Invoke-CursorInitialization {
 # 🔧 Modify system registry MachineGuid (ported from old version)
 function Update-MachineGuid {
     try {
-        Write-Host "$BLUE🔧 [Registry]$NC Modifying system registry MachineGuid..."
+        Write-Host "🔧 [Registry]$NC Modifying system registry MachineGuid..."
 
         # Check if registry path exists, create if not
         $registryPath = "HKLM:\SOFTWARE\Microsoft\Cryptography"
@@ -1277,7 +1277,7 @@ function Update-MachineGuid {
         $backupFile = $null
         if ($originalGuid) {
             $backupFile = "$BACKUP_DIR\MachineGuid_$(Get-Date -Format 'yyyyMMdd_HHmmss').reg"
-            Write-Host "$BLUE💾 [Backup]$NC Backing up registry..."
+            Write-Host "💾 [Backup]$NC Backing up registry..."
             $backupResult = Start-Process "reg.exe" -ArgumentList "export", "`"HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Cryptography`"", "`"$backupFile`"" -NoNewWindow -Wait -PassThru
 
             if ($backupResult.ExitCode -eq 0) {
@@ -1290,7 +1290,7 @@ function Update-MachineGuid {
 
         # Generate new GUID
         $newGuid = [System.Guid]::NewGuid().ToString()
-        Write-Host "$BLUE🔄 [Generate]$NC New MachineGuid: $newGuid"
+        Write-Host "🔄 [Generate]$NC New MachineGuid: $newGuid"
 
         # Update or create registry value
         Set-ItemProperty -Path $registryPath -Name MachineGuid -Value $newGuid -Force -ErrorAction Stop
@@ -1330,7 +1330,7 @@ function Update-MachineGuid {
 # 🚫 Disable Cursor auto update (Windows)
 function Disable-CursorAutoUpdate {
     Write-Host ""
-    Write-Host "$BLUE🚫 [Disable Update]$NC Attempting to disable Cursor auto update..."
+    Write-Host "🚫 [Disable Update]$NC Attempting to disable Cursor auto update..."
 
     # Detect Cursor installation path (supports auto-detection + manual fallback)
     $cursorAppPath = Resolve-CursorInstallPath -AllowPrompt
@@ -1419,7 +1419,7 @@ function Test-CursorEnvironment {
     )
 
     Write-Host ""
-    Write-Host "$BLUE🔍 [Environment Check]$NC Checking Cursor environment..."
+    Write-Host "🔍 [Environment Check]$NC Checking Cursor environment..."
 
     $configPath = $STORAGE_FILE
     $cursorAppData = $global:CursorAppDataDir
@@ -1498,20 +1498,20 @@ function Modify-MachineCodeConfig {
         Write-Host "$RED❌ [Error]$NC Config file does not exist: $configPath"
         Write-Host ""
         Write-Host "$YELLOW💡 [Solution]$NC Please try the following steps:"
-        Write-Host "$BLUE  1.  Manually launch the Cursor application$NC"
-        Write-Host "$BLUE  2.  Wait for Cursor to fully load (about 30 seconds)$NC"
-        Write-Host "$BLUE  3.  Close the Cursor application$NC"
-        Write-Host "$BLUE  4.  Rerun this script$NC"
+        Write-Host "  1.  Manually launch the Cursor application$NC"
+        Write-Host "  2.  Wait for Cursor to fully load (about 30 seconds)$NC"
+        Write-Host "  3.  Close the Cursor application$NC"
+        Write-Host "  4.  Rerun this script$NC"
         Write-Host ""
         Write-Host "$YELLOW⚠️  [Alternative]$NC If the problem persists:"
-        Write-Host "$BLUE  • Select the script's 'Reset Environment + Modify Machine Code' option$NC"
-        Write-Host "$BLUE  • This option will auto-generate the config file$NC"
+        Write-Host "  • Select the script's 'Reset Environment + Modify Machine Code' option$NC"
+        Write-Host "  • This option will auto-generate the config file$NC"
         Write-Host ""
 
         # Provide user choice
         $userChoice = Read-Host "Try to launch Cursor now to generate config file? (y/n)"
         if ($userChoice -match "^(y|yes)$") {
-            Write-Host "$BLUE🚀 [Attempt]$NC Attempting to launch Cursor..."
+            Write-Host "🚀 [Attempt]$NC Attempting to launch Cursor..."
             return Start-CursorToGenerateConfig
         }
 
@@ -1520,7 +1520,7 @@ function Modify-MachineCodeConfig {
 
     # Ensure processes are fully closed even in modify-only mode
     if ($Mode -eq "MODIFY_ONLY") {
-        Write-Host "$BLUE🔒 [Security Check]$NC Even in modify-only mode, need to ensure Cursor processes are fully closed"
+        Write-Host "🔒 [Security Check]$NC Even in modify-only mode, need to ensure Cursor processes are fully closed"
         if (-not (Stop-AllCursorProcesses -MaxRetries 3 -WaitSeconds 3)) {
             Write-Host "$RED❌ [Error]$NC Unable to close all Cursor processes, modification may fail"
             $userChoice = Read-Host "Force continue? (y/n)"
@@ -1538,13 +1538,13 @@ function Modify-MachineCodeConfig {
 
     # Verify config file format and display structure
     try {
-        Write-Host "$BLUE🔍 [Verify]$NC Checking config file format..."
+        Write-Host "🔍 [Verify]$NC Checking config file format..."
         $originalContent = Get-Content $configPath -Raw -Encoding UTF8 -ErrorAction Stop
         $config = $originalContent | ConvertFrom-Json -ErrorAction Stop
         Write-Host "$GREEN✅ [Verify]$NC Config file format correct"
 
         # Display relevant properties in current config file
-        Write-Host "$BLUE📋 [Current Config]$NC Checking existing telemetry properties:"
+        Write-Host "📋 [Current Config]$NC Checking existing telemetry properties:"
         $telemetryProperties = @('telemetry.machineId', 'telemetry.macMachineId', 'telemetry.devDeviceId', 'telemetry.sqmId')
         foreach ($prop in $telemetryProperties) {
             if ($config.PSObject.Properties[$prop]) {
@@ -1569,11 +1569,11 @@ function Modify-MachineCodeConfig {
     while ($retryCount -lt $maxRetries) {
         $retryCount++
         Write-Host ""
-        Write-Host "$BLUE🔄 [Attempt]$NC Attempt $retryCount/$maxRetries to modify..."
+        Write-Host "🔄 [Attempt]$NC Attempt $retryCount/$maxRetries to modify..."
 
         try {
             # Display operation progress
-            Write-Host "$BLUE⏳ [Progress]$NC 1/6 - Generating new device identifiers..."
+            Write-Host "⏳ [Progress]$NC 1/6 - Generating new device identifiers..."
 
             # Generate new IDs
             $MAC_MACHINE_ID = [System.Guid]::NewGuid().ToString()
@@ -1606,7 +1606,7 @@ function Modify-MachineCodeConfig {
 
             Write-Host "$GREEN✅ [Progress]$NC 1/7 - Device identifier generation complete"
 
-            Write-Host "$BLUE⏳ [Progress]$NC 2/7 - Creating backup directory..."
+            Write-Host "⏳ [Progress]$NC 2/7 - Creating backup directory..."
 
             # Backup original values (enhanced version)
             $backupDir = $BACKUP_DIR
@@ -1620,7 +1620,7 @@ function Modify-MachineCodeConfig {
             $backupName = "storage.json.backup_$(Get-Date -Format 'yyyyMMdd_HHmmss')_retry$retryCount"
             $backupPath = "$backupDir\$backupName"
 
-            Write-Host "$BLUE⏳ [Progress]$NC 3/7 - Backing up original config..."
+            Write-Host "⏳ [Progress]$NC 3/7 - Backing up original config..."
             Copy-Item $configPath $backupPath -ErrorAction Stop
 
             # Verify backup success
@@ -1636,13 +1636,13 @@ function Modify-MachineCodeConfig {
                 throw "Backup file creation failed"
             }
 
-            Write-Host "$BLUE⏳ [Progress]$NC 4/7 - Reading original config to memory..."
+            Write-Host "⏳ [Progress]$NC 4/7 - Reading original config to memory..."
 
             # Atomic operation: read original content to memory
             $originalContent = Get-Content $configPath -Raw -Encoding UTF8 -ErrorAction Stop
             $config = $originalContent | ConvertFrom-Json -ErrorAction Stop
 
-            Write-Host "$BLUE⏳ [Progress]$NC 5/7 - Updating config in memory..."
+            Write-Host "⏳ [Progress]$NC 5/7 - Updating config in memory..."
 
             # Update config values (safe way, ensure properties exist)
             # 🔧 Fix: Add storage.serviceMachineId and telemetry.firstSessionDate
@@ -1663,15 +1663,15 @@ function Modify-MachineCodeConfig {
                 if ($config.PSObject.Properties[$key]) {
                     # Property exists, update directly
                     $config.$key = $value
-                    Write-Host "$BLUE  ✓ Update property: ${key}$NC"
+                    Write-Host "  ✓ Update property: ${key}$NC"
                 } else {
                     # Property does not exist, add new property
                     $config | Add-Member -MemberType NoteProperty -Name $key -Value $value -Force
-                    Write-Host "$BLUE  + Add property: ${key}$NC"
+                    Write-Host "  + Add property: ${key}$NC"
                 }
             }
             
-            Write-Host "$BLUE⏳ [Progress]$NC 6/7 - Atomically writing new config file..."
+            Write-Host "⏳ [Progress]$NC 6/7 - Atomically writing new config file..."
             
             # Atomic operation: delete original file, write new file
             $tempPath = "$configPath.tmp"
@@ -1729,7 +1729,7 @@ function Modify-MachineCodeConfig {
             $file.IsReadOnly = $false  # Keep writable for future modifications
             
             # Final verification of modification results
-            Write-Host "$BLUE⏳ [Progress]$NC 7/7 - Verifying new config file..."
+            Write-Host "⏳ [Progress]$NC 7/7 - Verifying new config file..."
             
             $verifyContent = Get-Content $configPath -Raw -Encoding UTF8 -ErrorAction Stop
             $verifyConfig = $verifyContent | ConvertFrom-Json -ErrorAction Stop
@@ -1757,7 +1757,7 @@ function Modify-MachineCodeConfig {
             }
 
             # Display verification results
-            Write-Host "$BLUE📋 [Verification Details]$NC"
+            Write-Host "📋 [Verification Details]$NC"
             foreach ($result in $verificationResults) {
                 Write-Host "   $result"
             }
@@ -1766,7 +1766,7 @@ function Modify-MachineCodeConfig {
                 Write-Host "$GREEN✅ [Success]$NC Attempt $retryCount modification successful!"
                 Write-Host ""
                 Write-Host "$GREEN🎉 [Complete]$NC Machine code config modification complete!"
-                Write-Host "$BLUE📋 [Details]$NC Updated the following identifiers:"
+                Write-Host "📋 [Details]$NC Updated the following identifiers:"
                 Write-Host "   🔹 machineId: $MACHINE_ID"
                 Write-Host "   🔹 macMachineId: $MAC_MACHINE_ID"
                 Write-Host "   🔹 devDeviceId: $UUID"
@@ -1777,7 +1777,7 @@ function Modify-MachineCodeConfig {
                 Write-Host "$GREEN💾 [Backup]$NC Original config backed up to: $backupName"
 
                 # 🔧 New: Modify machineid file
-                Write-Host "$BLUE🔧 [machineid]$NC Modifying machineid file..."
+                Write-Host "🔧 [machineid]$NC Modifying machineid file..."
                 $machineIdFilePath = if ($global:CursorAppDataDir) { Join-Path $global:CursorAppDataDir "machineid" } else { $null }
                 if (-not $machineIdFilePath) {
                     Write-Host "$YELLOW⚠️  [machineid]$NC Unable to resolve machineid file path, skipping modification"
@@ -1799,12 +1799,12 @@ function Modify-MachineCodeConfig {
                         Write-Host "$GREEN🔒 [Protect]$NC machineid file set to read-only"
                     } catch {
                         Write-Host "$YELLOW⚠️  [machineid]$NC machineid file modification failed: $($_.Exception.Message)"
-                        Write-Host "$BLUE💡 [Tip]$NC Can manually modify file: $machineIdFilePath"
+                        Write-Host "💡 [Tip]$NC Can manually modify file: $machineIdFilePath"
                     }
                 }
 
                 # 🔧 New: Modify .updaterId file (updater device identifier)
-                Write-Host "$BLUE🔧 [updaterId]$NC Modifying .updaterId file..."
+                Write-Host "🔧 [updaterId]$NC Modifying .updaterId file..."
                 $updaterIdFilePath = if ($global:CursorAppDataDir) { Join-Path $global:CursorAppDataDir ".updaterId" } else { $null }
                 if (-not $updaterIdFilePath) {
                     Write-Host "$YELLOW⚠️  [updaterId]$NC Unable to resolve .updaterId file path, skipping modification"
@@ -1827,27 +1827,27 @@ function Modify-MachineCodeConfig {
                         Write-Host "$GREEN🔒 [Protect]$NC .updaterId file set to read-only"
                     } catch {
                         Write-Host "$YELLOW⚠️  [updaterId]$NC .updaterId file modification failed: $($_.Exception.Message)"
-                        Write-Host "$BLUE💡 [Tip]$NC Can manually modify file: $updaterIdFilePath"
+                        Write-Host "💡 [Tip]$NC Can manually modify file: $updaterIdFilePath"
                     }
                 }
 
                 # 🔒 Add config file protection mechanism
-                Write-Host "$BLUE🔒 [Protect]$NC Setting config file protection..."
+                Write-Host "🔒 [Protect]$NC Setting config file protection..."
                 try {
                     $configFile = Get-Item $configPath
                     $configFile.IsReadOnly = $true
                     Write-Host "$GREEN✅ [Protect]$NC Config file set to read-only to prevent Cursor from overwriting modifications"
-                    Write-Host "$BLUE💡 [Tip]$NC File path: $configPath"
+                    Write-Host "💡 [Tip]$NC File path: $configPath"
                 } catch {
                     Write-Host "$YELLOW⚠️  [Protect]$NC Failed to set read-only attribute: $($_.Exception.Message)"
-                    Write-Host "$BLUE💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
+                    Write-Host "💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
                 }
-                Write-Host "$BLUE 🔒 [Security]$NC Recommend restarting Cursor to ensure config takes effect"
+                Write-Host " 🔒 [Security]$NC Recommend restarting Cursor to ensure config takes effect"
                 return $true
             } else {
                 Write-Host "$RED❌ [Failed]$NC Attempt $retryCount verification failed"
                 if ($retryCount -lt $maxRetries) {
-                    Write-Host "$BLUE🔄 [Restore]$NC Restoring backup, preparing to retry..."
+                    Write-Host "🔄 [Restore]$NC Restoring backup, preparing to retry..."
                     Copy-Item $backupPath $configPath -Force
                     Start-Sleep -Seconds 2
                     continue  # Continue to next retry
@@ -1860,7 +1860,7 @@ function Modify-MachineCodeConfig {
 
         } catch {
             Write-Host "$RED❌ [Exception]$NC Attempt $retryCount encountered exception: $($_.Exception.Message)"
-            Write-Host "$BLUE💡 [Debug Info]$NC Error type: $($_.Exception.GetType().FullName)"
+            Write-Host "💡 [Debug Info]$NC Error type: $($_.Exception.GetType().FullName)"
 
             # Clean up temp files
             if (Test-Path "$configPath.tmp") {
@@ -1868,7 +1868,7 @@ function Modify-MachineCodeConfig {
             }
 
             if ($retryCount -lt $maxRetries) {
-                Write-Host "$BLUE🔄 [Restore]$NC Restoring backup, preparing to retry..."
+                Write-Host "🔄 [Restore]$NC Restoring backup, preparing to retry..."
                 if (Test-Path $backupPath) {
                     Copy-Item $backupPath $configPath -Force
                 }
@@ -1878,7 +1878,7 @@ function Modify-MachineCodeConfig {
                 Write-Host "$RED❌ [Final Failure]$NC All retries failed"
                 # Try to restore backup
                 if (Test-Path $backupPath) {
-                    Write-Host "$BLUE🔄 [Restore]$NC Restoring backup config..."
+                    Write-Host "🔄 [Restore]$NC Restoring backup config..."
                     try {
                         Copy-Item $backupPath $configPath -Force
                         Write-Host "$GREEN✅ [Restore]$NC Original config restored"
@@ -1899,7 +1899,7 @@ function Modify-MachineCodeConfig {
 
 #  Launch Cursor to generate config file
 function Start-CursorToGenerateConfig {
-    Write-Host "$BLUE🚀 [Launch]$NC Attempting to launch Cursor to generate config file..."
+    Write-Host "🚀 [Launch]$NC Attempting to launch Cursor to generate config file..."
 
     # Find Cursor executable (supports auto-detection + manual fallback)
     $installPath = Resolve-CursorInstallPath -AllowPrompt
@@ -1911,14 +1911,14 @@ function Start-CursorToGenerateConfig {
     }
 
     try {
-        Write-Host "$BLUE📍 [Path]$NC Using Cursor path: $cursorPath"
+        Write-Host "📍 [Path]$NC Using Cursor path: $cursorPath"
 
         # Launch Cursor
         $process = Start-Process -FilePath $cursorPath -PassThru -WindowStyle Normal
         Write-Host "$GREEN🚀 [Launch]$NC Cursor launched, PID: $($process.Id)"
 
         Write-Host "$YELLOW⏳ [Wait]$NC Please wait for Cursor to fully load (about 30 seconds)..."
-        Write-Host "$BLUE💡 [Tip]$NC You can manually close Cursor after it fully loads"
+        Write-Host "💡 [Tip]$NC You can manually close Cursor after it fully loads"
 
         # Wait for config file generation
         $configPath = $STORAGE_FILE
@@ -1939,11 +1939,11 @@ function Start-CursorToGenerateConfig {
 
         if (Test-Path $configPath) {
             Write-Host "$GREEN✅ [Success]$NC Config file generated!"
-            Write-Host "$BLUE💡 [Tip]$NC You can now close Cursor and rerun the script"
+            Write-Host "💡 [Tip]$NC You can now close Cursor and rerun the script"
             return $true
         } else {
             Write-Host "$YELLOW⚠️  [Timeout]$NC Config file was not generated within expected time"
-            Write-Host "$BLUE💡 [Suggestion]$NC Please manually operate Cursor (e.g., create a new file) to trigger config generation"
+            Write-Host "💡 [Suggestion]$NC Please manually operate Cursor (e.g., create a new file) to trigger config generation"
             return $false
         }
 
@@ -1979,26 +1979,26 @@ Write-Host @"
     ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝
 
 "@
-Write-Host "$BLUE================================$NC"
+Write-Host "================================$NC"
 Write-Host "$GREEN🚀   Cursor Trial Reset Pro Tool          $NC"
 Write-Host "$YELLOW📱  Follow WeChat Official Account: 【煎饼果子卷AI】 $NC"
 Write-Host "$YELLOW🤝  Exchange more Cursor tips and AI knowledge (script is free, follow the account to join group for more tips and experts)  $NC"
 Write-Host "$YELLOW💡  [Important Notice] This tool is free, if it helps you, please follow the WeChat Official Account 【煎饼果子卷AI】  $NC"
 Write-Host ""
 Write-Host "$YELLOW⚡  [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  $NC"
-Write-Host "$BLUE================================$NC"
+Write-Host "================================$NC"
 
 # 🎯 User selection menu
 Write-Host ""
 Write-Host "$GREEN🎯 [Select Mode]$NC Please select the operation you want to perform:"
 Write-Host ""
-Write-Host "$BLUE  1.  Modify machine code only$NC"
+Write-Host "1.  Modify machine code only$NC"
 Write-Host "$YELLOW      • Execute machine code modification function$NC"
 Write-Host "$YELLOW      • Execute injection of crack JS code into core files$NC"
 Write-Host "$YELLOW      • Skip folder deletion/environment reset steps$NC"
 Write-Host "$YELLOW      • Preserve existing Cursor config and data$NC"
 Write-Host ""
-Write-Host "$BLUE  2.  Reset environment + Modify machine code$NC"
+Write-Host "2.  Reset environment + Modify machine code$NC"
 Write-Host "$RED      • Perform complete environment reset (delete Cursor folders)$NC"
 Write-Host "$RED      • ⚠️  Config will be lost, please backup$NC"
 Write-Host "$YELLOW      • Follow machine code modification$NC"
@@ -2034,10 +2034,10 @@ Write-Host ""
 # 📋 Display execution flow description based on selection
 if ($executeMode -eq "MODIFY_ONLY") {
     Write-Host "$GREEN📋 [Execution Flow]$NC Modify machine code only mode will execute the following steps:"
-    Write-Host "$BLUE  1.  Detect Cursor config file$NC"
-    Write-Host "$BLUE  2.  Backup existing config file$NC"
-    Write-Host "$BLUE  3.  Modify machine code config$NC"
-    Write-Host "$BLUE  4.  Display operation completion info$NC"
+    Write-Host "1.  Detect Cursor config file$NC"
+    Write-Host "2.  Backup existing config file$NC"
+    Write-Host "3.  Modify machine code config$NC"
+    Write-Host "4.  Display operation completion info$NC"
     Write-Host ""
     Write-Host "$YELLOW⚠️  [Notes]$NC"
     Write-Host "$YELLOW  • Will not delete any folders or reset environment$NC"
@@ -2045,19 +2045,19 @@ if ($executeMode -eq "MODIFY_ONLY") {
     Write-Host "$YELLOW  • Original config file will be automatically backed up$NC"
 } else {
     Write-Host "$GREEN📋 [Execution Flow]$NC Reset environment + Modify machine code mode will execute the following steps:"
-    Write-Host "$BLUE  1.  Detect and close Cursor process$NC"
-    Write-Host "$BLUE  2.  Save Cursor program path info$NC"
-    Write-Host "$BLUE  3.  Delete specified Cursor trial-related folders$NC"
-    Write-Host "$BLUE      📁 C:\Users\Administrator\.cursor$NC"
-    Write-Host "$BLUE      📁 C:\Users\Administrator\AppData\Roaming\Cursor$NC"
-    Write-Host "$BLUE      📁 C:\Users\%USERNAME%\.cursor$NC"
-    Write-Host "$BLUE      📁 C:\Users\%USERNAME%\AppData\Roaming\Cursor$NC"
-    Write-Host "$BLUE  3.5. Pre-create necessary directory structure to avoid permission issues$NC"
-    Write-Host "$BLUE  4.  Restart Cursor to let it generate new config file$NC"
-    Write-Host "$BLUE  5.  Wait for config file generation to complete (max 45 seconds)$NC"
-    Write-Host "$BLUE  6.  Close Cursor process$NC"
-    Write-Host "$BLUE  7.  Modify newly generated machine code config file$NC"
-    Write-Host "$BLUE  8.  Display operation completion statistics$NC"
+    Write-Host "  1.  Detect and close Cursor process$NC"
+    Write-Host "  2.  Save Cursor program path info$NC"
+    Write-Host "  3.  Delete specified Cursor trial-related folders$NC"
+    Write-Host "      📁 C:\Users\Administrator\.cursor$NC"
+    Write-Host "      📁 C:\Users\Administrator\AppData\Roaming\Cursor$NC"
+    Write-Host "      📁 C:\Users\%USERNAME%\.cursor$NC"
+    Write-Host "      📁 C:\Users\%USERNAME%\AppData\Roaming\Cursor$NC"
+    Write-Host "  3.5. Pre-create necessary directory structure to avoid permission issues$NC"
+    Write-Host "  4.  Restart Cursor to let it generate new config file$NC"
+    Write-Host "  5.  Wait for config file generation to complete (max 45 seconds)$NC"
+    Write-Host "  6.  Close Cursor process$NC"
+    Write-Host "  7.  Modify newly generated machine code config file$NC"
+    Write-Host "  8.  Display operation completion statistics$NC"
     Write-Host ""
     Write-Host "$YELLOW⚠️  [Notes]$NC"
     Write-Host "$YELLOW  • Please do not manually operate Cursor during script execution$NC"
@@ -2125,7 +2125,7 @@ Write-Host "$GREEN🔍 [Check]$NC Checking Cursor process..."
 
 function Get-ProcessDetails {
     param($processName)
-    Write-Host "$BLUE🔍 [Debug]$NC Getting $processName process details:"
+    Write-Host "🔍 [Debug]$NC Getting $processName process details:"
     Get-WmiObject Win32_Process -Filter "name='$processName'" |
         Select-Object ProcessId, ExecutablePath, CommandLine |
         Format-List
@@ -2184,7 +2184,7 @@ function Close-CursorProcessAndSaveInfo {
         }
         Write-Host "$GREEN✅ [Success]$NC $processName successfully closed"
     } else {
-        Write-Host "$BLUE💡 [Tip]$NC No $processName process found running"
+        Write-Host "💡 [Tip]$NC No $processName process found running"
         # Try to find Cursor installation path
         $installPath = Resolve-CursorInstallPath
         $candidatePath = if ($installPath) { Join-Path $installPath "Cursor.exe" } else { $null }
@@ -2235,9 +2235,9 @@ if ($executeMode -eq "MODIFY_ONLY") {
         }
         Write-Host ""
         Write-Host "$YELLOW💡 [Suggestion]$NC Please select one of the following actions:"
-        Write-Host "$BLUE  1.  Select 'Reset Environment + Modify Machine Code' option (recommended)$NC"
-        Write-Host "$BLUE  2.  Manually launch Cursor once, then rerun the script$NC"
-        Write-Host "$BLUE  3.  Check if Cursor is properly installed$NC"
+        Write-Host "  1.  Select 'Reset Environment + Modify Machine Code' option (recommended)$NC"
+        Write-Host "  2.  Manually launch Cursor once, then rerun the script$NC"
+        Write-Host "  3.  Check if Cursor is properly installed$NC"
         Write-Host ""
         Read-Host "Press Enter to exit"
         exit 1
@@ -2251,13 +2251,13 @@ if ($executeMode -eq "MODIFY_ONLY") {
         Write-Host "$GREEN🎉 [Config File]$NC Machine code config file modification complete!"
 
         # Add registry modification
-        Write-Host "$BLUE🔧 [Registry]$NC Modifying system registry..."
+        Write-Host "🔧 [Registry]$NC Modifying system registry..."
         $registrySuccess = Update-MachineGuid
 
         # 🔧 New: JavaScript injection function (device identification bypass enhancement)
         Write-Host ""
-        Write-Host "$BLUE🔧 [Device ID Bypass]$NC Executing JavaScript injection function..."
-        Write-Host "$BLUE💡 [Note]$NC This function will directly modify Cursor core JS files to achieve deeper device identification bypass"
+        Write-Host "🔧 [Device ID Bypass]$NC Executing JavaScript injection function..."
+        Write-Host "💡 [Note]$NC This function will directly modify Cursor core JS files to achieve deeper device identification bypass"
         $jsSuccess = Modify-CursorJSFiles
 
         if ($registrySuccess) {
@@ -2267,7 +2267,7 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$GREEN✅ [JS Injection]$NC JavaScript injection function executed successfully"
                 Write-Host ""
                 Write-Host "$GREEN🎉 [Complete]$NC All machine code modifications complete (enhanced version)!"
-                Write-Host "$BLUE📋 [Details]$NC Completed the following modifications:"
+                Write-Host "📋 [Details]$NC Completed the following modifications:"
                 Write-Host "$GREEN  ✓ Cursor config file (storage.json)$NC"
                 Write-Host "$GREEN  ✓ System registry (MachineGuid)$NC"
                 Write-Host "$GREEN  ✓ JavaScript kernel injection (device ID bypass)$NC"
@@ -2275,14 +2275,14 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$YELLOW⚠️  [JS Injection]$NC JavaScript injection function failed, but other functions successful"
                 Write-Host ""
                 Write-Host "$GREEN🎉 [Complete]$NC All machine code modifications complete!"
-                Write-Host "$BLUE📋 [Details]$NC Completed the following modifications:"
+                Write-Host "📋 [Details]$NC Completed the following modifications:"
                 Write-Host "$GREEN  ✓ Cursor config file (storage.json)$NC"
                 Write-Host "$GREEN  ✓ System registry (MachineGuid)$NC"
                 Write-Host "$YELLOW  ⚠ JavaScript kernel injection (partially failed)$NC"
             }
 
             # 🔒 Add config file protection mechanism
-            Write-Host "$BLUE🔒 [Protect]$NC Setting config file protection..."
+            Write-Host "🔒 [Protect]$NC Setting config file protection..."
             try {
                 $configPath = $STORAGE_FILE
                 if (-not $configPath) {
@@ -2291,10 +2291,10 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 $configFile = Get-Item $configPath
                 $configFile.IsReadOnly = $true
                 Write-Host "$GREEN✅ [Protect]$NC Config file set to read-only to prevent Cursor from overwriting modifications"
-                Write-Host "$BLUE💡 [Tip]$NC File path: $configPath"
+                Write-Host "💡 [Tip]$NC File path: $configPath"
             } catch {
                 Write-Host "$YELLOW⚠️  [Protect]$NC Failed to set read-only attribute: $($_.Exception.Message)"
-                Write-Host "$BLUE💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
+                Write-Host "💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
             }
         } else {
             Write-Host "$YELLOW⚠️  [Registry]$NC Registry modification failed, but config file modification successful"
@@ -2303,8 +2303,8 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$GREEN✅ [JS Injection]$NC JavaScript injection function executed successfully"
                 Write-Host ""
                 Write-Host "$YELLOW🎉 [Partially Complete]$NC Config file and JavaScript injection complete, registry modification failed"
-                Write-Host "$BLUE💡 [Suggestion]$NC May need administrator privileges to modify registry"
-                Write-Host "$BLUE📋 [Details]$NC Completed the following modifications:"
+                Write-Host "💡 [Suggestion]$NC May need administrator privileges to modify registry"
+                Write-Host "📋 [Details]$NC Completed the following modifications:"
                 Write-Host "$GREEN  ✓ Cursor config file (storage.json)$NC"
                 Write-Host "$YELLOW  ⚠ System registry (MachineGuid) - Failed$NC"
                 Write-Host "$GREEN  ✓ JavaScript kernel injection (device ID bypass)$NC"
@@ -2312,11 +2312,11 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$YELLOW⚠️  [JS Injection]$NC JavaScript injection function failed"
                 Write-Host ""
                 Write-Host "$YELLOW🎉 [Partially Complete]$NC Config file modification complete, registry and JavaScript injection failed"
-                Write-Host "$BLUE💡 [Suggestion]$NC May need administrator privileges to modify registry"
+                Write-Host "💡 [Suggestion]$NC May need administrator privileges to modify registry"
             }
 
             # 🔒 Even if registry modification fails, still protect config file
-            Write-Host "$BLUE🔒 [Protect]$NC Setting config file protection..."
+            Write-Host "🔒 [Protect]$NC Setting config file protection..."
             try {
                 $configPath = $STORAGE_FILE
                 if (-not $configPath) {
@@ -2325,22 +2325,22 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 $configFile = Get-Item $configPath
                 $configFile.IsReadOnly = $true
                 Write-Host "$GREEN✅ [Protect]$NC Config file set to read-only to prevent Cursor from overwriting modifications"
-                Write-Host "$BLUE💡 [Tip]$NC File path: $configPath"
+                Write-Host "💡 [Tip]$NC File path: $configPath"
             } catch {
                 Write-Host "$YELLOW⚠️  [Protect]$NC Failed to set read-only attribute: $($_.Exception.Message)"
-                Write-Host "$BLUE💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
+                Write-Host "💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
             }
         }
 
         Write-Host ""
-        Write-Host "$BLUE🚫 [Disable Update]$NC Disabling Cursor auto update..."
+        Write-Host "🚫 [Disable Update]$NC Disabling Cursor auto update..."
         if (Disable-CursorAutoUpdate) {
             Write-Host "$GREEN✅ [Disable Update]$NC Auto update processed"
         } else {
             Write-Host "$YELLOW⚠️  [Disable Update]$NC Unable to confirm update disable, may need manual handling"
         }
 
-        Write-Host "$BLUE💡 [Tip]$NC You can now launch Cursor with the new machine code config"
+        Write-Host "💡 [Tip]$NC You can now launch Cursor with the new machine code config"
     } else {
         Write-Host ""
         Write-Host "$RED❌ [Failed]$NC Machine code modification failed!"
@@ -2385,13 +2385,13 @@ if ($executeMode -eq "MODIFY_ONLY") {
         Write-Host "$GREEN🎉 [Config File]$NC Machine code config file modification complete!"
 
         # Add registry modification
-        Write-Host "$BLUE🔧 [Registry]$NC Modifying system registry..."
+        Write-Host "🔧 [Registry]$NC Modifying system registry..."
         $registrySuccess = Update-MachineGuid
 
         # 🔧 New: JavaScript injection function (device identification bypass enhancement)
         Write-Host ""
-        Write-Host "$BLUE🔧 [Device ID Bypass]$NC Executing JavaScript injection function..."
-        Write-Host "$BLUE💡 [Note]$NC This function will directly modify Cursor core JS files to achieve deeper device identification bypass"
+        Write-Host "🔧 [Device ID Bypass]$NC Executing JavaScript injection function..."
+        Write-Host "💡 [Note]$NC This function will directly modify Cursor core JS files to achieve deeper device identification bypass"
         $jsSuccess = Modify-CursorJSFiles
 
         if ($registrySuccess) {
@@ -2401,7 +2401,7 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$GREEN✅ [JS Injection]$NC JavaScript injection function executed successfully"
                 Write-Host ""
                 Write-Host "$GREEN🎉 [Complete]$NC All operations complete (enhanced version)!"
-                Write-Host "$BLUE📋 [Details]$NC Completed the following operations:"
+                Write-Host "📋 [Details]$NC Completed the following operations:"
                 Write-Host "$GREEN  ✓ Delete Cursor trial-related folders$NC"
                 Write-Host "$GREEN  ✓ Cursor initialization cleanup$NC"
                 Write-Host "$GREEN  ✓ Regenerate config file$NC"
@@ -2412,7 +2412,7 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$YELLOW⚠️  [JS Injection]$NC JavaScript injection function failed, but other functions successful"
                 Write-Host ""
                 Write-Host "$GREEN🎉 [Complete]$NC All operations complete!"
-                Write-Host "$BLUE📋 [Details]$NC Completed the following operations:"
+                Write-Host "📋 [Details]$NC Completed the following operations:"
                 Write-Host "$GREEN  ✓ Delete Cursor trial-related folders$NC"
                 Write-Host "$GREEN  ✓ Cursor initialization cleanup$NC"
                 Write-Host "$GREEN  ✓ Regenerate config file$NC"
@@ -2422,7 +2422,7 @@ if ($executeMode -eq "MODIFY_ONLY") {
             }
 
             # 🔒 Add config file protection mechanism
-            Write-Host "$BLUE🔒 [Protect]$NC Setting config file protection..."
+            Write-Host "🔒 [Protect]$NC Setting config file protection..."
             try {
                 $configPath = $STORAGE_FILE
                 if (-not $configPath) {
@@ -2431,10 +2431,10 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 $configFile = Get-Item $configPath
                 $configFile.IsReadOnly = $true
                 Write-Host "$GREEN✅ [Protect]$NC Config file set to read-only to prevent Cursor from overwriting modifications"
-                Write-Host "$BLUE💡 [Tip]$NC File path: $configPath"
+                Write-Host "💡 [Tip]$NC File path: $configPath"
             } catch {
                 Write-Host "$YELLOW⚠️  [Protect]$NC Failed to set read-only attribute: $($_.Exception.Message)"
-                Write-Host "$BLUE💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
+                Write-Host "💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
             }
         } else {
             Write-Host "$YELLOW⚠️  [Registry]$NC Registry modification failed, but other operations successful"
@@ -2443,8 +2443,8 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$GREEN✅ [JS Injection]$NC JavaScript injection function executed successfully"
                 Write-Host ""
                 Write-Host "$YELLOW🎉 [Partially Complete]$NC Most operations complete, registry modification failed"
-                Write-Host "$BLUE💡 [Suggestion]$NC May need administrator privileges to modify registry"
-                Write-Host "$BLUE📋 [Details]$NC Completed the following operations:"
+                Write-Host "💡 [Suggestion]$NC May need administrator privileges to modify registry"
+                Write-Host "📋 [Details]$NC Completed the following operations:"
                 Write-Host "$GREEN  ✓ Delete Cursor trial-related folders$NC"
                 Write-Host "$GREEN  ✓ Cursor initialization cleanup$NC"
                 Write-Host "$GREEN  ✓ Regenerate config file$NC"
@@ -2455,11 +2455,11 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 Write-Host "$YELLOW⚠️  [JS Injection]$NC JavaScript injection function failed"
                 Write-Host ""
                 Write-Host "$YELLOW🎉 [Partially Complete]$NC Most operations complete, registry and JavaScript injection failed"
-                Write-Host "$BLUE💡 [Suggestion]$NC May need administrator privileges to modify registry"
+                Write-Host "💡 [Suggestion]$NC May need administrator privileges to modify registry"
             }
 
             # 🔒 Even if registry modification fails, still protect config file
-            Write-Host "$BLUE🔒 [Protect]$NC Setting config file protection..."
+            Write-Host "🔒 [Protect]$NC Setting config file protection..."
             try {
                 $configPath = $STORAGE_FILE
                 if (-not $configPath) {
@@ -2468,15 +2468,15 @@ if ($executeMode -eq "MODIFY_ONLY") {
                 $configFile = Get-Item $configPath
                 $configFile.IsReadOnly = $true
                 Write-Host "$GREEN✅ [Protect]$NC Config file set to read-only to prevent Cursor from overwriting modifications"
-                Write-Host "$BLUE💡 [Tip]$NC File path: $configPath"
+                Write-Host "💡 [Tip]$NC File path: $configPath"
             } catch {
                 Write-Host "$YELLOW⚠️  [Protect]$NC Failed to set read-only attribute: $($_.Exception.Message)"
-                Write-Host "$BLUE💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
+                Write-Host "💡 [Suggestion]$NC Can manually right-click file → Properties → check 'Read-only'"
             }
         }
 
         Write-Host ""
-        Write-Host "$BLUE🚫 [Disable Update]$NC Disabling Cursor auto update..."
+        Write-Host "🚫 [Disable Update]$NC Disabling Cursor auto update..."
         if (Disable-CursorAutoUpdate) {
             Write-Host "$GREEN✅ [Disable Update]$NC Auto update processed"
         } else {
@@ -2500,7 +2500,7 @@ Write-Host ""
 
 # 🎉 Script execution complete
 Write-Host "$GREEN🎉 [Script Complete]$NC Thank you for using the Cursor Machine Code Modifier Tool!"
-Write-Host "$BLUE💡 [Tip]$NC If you have any issues, please refer to the WeChat Official Account or rerun the script"
+Write-Host "💡 [Tip]$NC If you have any issues, please refer to the WeChat Official Account or rerun the script"
 Write-Host ""
 Read-Host "Press Enter to exit"
 exit 0
