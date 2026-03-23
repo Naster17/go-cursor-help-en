@@ -321,32 +321,32 @@ test_cursor_environment() {
     fi
 }
 
-# 🚀 启动Cursor生成配置文件
+# 🚀 Launch Cursor to generate config file
 start_cursor_to_generate_config() {
-    log_info "🚀 [启动] 正在尝试启动Cursor生成配置文件..."
+    log_info "🚀 [Launch] Attempting to launch Cursor to generate config file..."
 
     local cursor_app_path="/Applications/Cursor.app"
     local cursor_executable="$cursor_app_path/Contents/MacOS/Cursor"
 
     if [ ! -f "$cursor_executable" ]; then
-        log_error "❌ [错误] 未找到Cursor可执行文件: $cursor_executable"
+        log_error "❌ [Error] Cursor executable not found: $cursor_executable"
         return 1
     fi
 
-    log_info "📍 [路径] 使用Cursor路径: $cursor_executable"
+    log_info "📍 [Path] Using Cursor path: $cursor_executable"
 
-    # 🚀 启动前权限修复
+    # 🚀 Fix permissions before launch
     ensure_cursor_directory_permissions
 
-    # 启动Cursor
+    # Launch Cursor
     "$cursor_executable" > /dev/null 2>&1 &
     local cursor_pid=$!
-    log_info "🚀 [启动] Cursor已启动，PID: $cursor_pid"
+    log_info "🚀 [Launch] Cursor launched, PID: $cursor_pid"
 
-    log_info "⏳ [等待] 请等待Cursor完全加载（约30秒）..."
-    log_info "💡 [提示] 您可以在Cursor完全加载后手动关闭它"
+    log_info "⏳ [Wait] Please wait for Cursor to fully load (about 30 seconds)..."
+    log_info "💡 [Tip] You can manually close Cursor after it fully loads"
 
-    # 等待配置文件生成
+    # Wait for config file generation
     local config_path="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/storage.json"
     local max_wait=60
     local waited=0
@@ -355,79 +355,79 @@ start_cursor_to_generate_config() {
         sleep 2
         waited=$((waited + 2))
         if [ $((waited % 10)) -eq 0 ]; then
-            log_info "⏳ [等待] 等待配置文件生成... ($waited/$max_wait 秒)"
+            log_info "⏳ [Wait] Waiting for config file generation... ($waited/$max_wait sec)"
         fi
     done
 
     if [ -f "$config_path" ]; then
-        log_info "✅ [成功] 配置文件已生成！"
-        log_info "💡 [提示] 现在可以关闭Cursor并重新运行脚本"
+        log_info "✅ [Success] Config file generated!"
+        log_info "💡 [Tip] You can now close Cursor and rerun the script"
         return 0
     else
-        log_warn "⚠️  [超时] 配置文件未在预期时间内生成"
-        log_info "💡 [建议] 请手动操作Cursor（如创建新文件）以触发配置生成"
+        log_warn "⚠️  [Timeout] Config file was not generated within expected time"
+        log_info "💡 [Suggestion] Please manually operate Cursor (e.g., create a new file) to trigger config generation"
         return 1
     fi
 }
 
-# 🛡️ 统一权限修复函数（优化版本）
+# 🛡️ Unified permission fix function (optimized version)
 ensure_cursor_directory_permissions() {
-    log_info "🛡️ [权限修复] 执行核心权限修复命令..."
+    log_info "🛡️ [Permission Fix] Executing core permission fix commands..."
 
-    # ⚠️ 关键：不要用 $(whoami) 当作目标用户！在 sudo 场景下 whoami= root，会把用户目录 chown 成 root，导致 Cursor 启动 EACCES
+    # ⚠️ Critical: Don't use $(whoami) as target user! In sudo scenarios whoami=root, will chown user directory to root, causing Cursor EACCES on startup
     local target_user="${TARGET_USER:-${SUDO_USER:-$USER}}"
     local cursor_support_dir="$TARGET_HOME/Library/Application Support/Cursor"
     local cursor_home_dir="$TARGET_HOME/.cursor"
 
-    # 确保目录存在
+    # Ensure directories exist
     mkdir -p "$cursor_support_dir" 2>/dev/null || true
     mkdir -p "$cursor_home_dir/extensions" 2>/dev/null || true
 
-    # 🔧 执行用户验证有效的4个核心权限修复命令
-    log_info "🔧 [修复] 执行4个核心权限修复命令..."
+    # 🔧 Execute 4 core permission fix commands validated by users
+    log_info "🔧 [Fix] Executing 4 core permission fix commands..."
 
-    # 命令1: sudo chown -R <真实用户> ~/Library/"Application Support"/Cursor
+    # Command 1: sudo chown -R <real user> ~/Library/"Application Support"/Cursor
     if sudo chown -R "$target_user" "$cursor_support_dir" 2>/dev/null; then
-        log_info "✅ [1/4] sudo chown Application Support/Cursor 成功"
+        log_info "✅ [1/4] sudo chown Application Support/Cursor successful"
     else
-        log_warn "⚠️  [1/4] sudo chown Application Support/Cursor 失败"
+        log_warn "⚠️  [1/4] sudo chown Application Support/Cursor failed"
     fi
 
-    # 命令2: sudo chown -R <真实用户> ~/.cursor
+    # Command 2: sudo chown -R <real user> ~/.cursor
     if sudo chown -R "$target_user" "$cursor_home_dir" 2>/dev/null; then
-        log_info "✅ [2/4] sudo chown .cursor 成功"
+        log_info "✅ [2/4] sudo chown .cursor successful"
     else
-        log_warn "⚠️  [2/4] sudo chown .cursor 失败"
+        log_warn "⚠️  [2/4] sudo chown .cursor failed"
     fi
 
-    # 命令3: chmod -R u+rwX ~/Library/"Application Support"/Cursor
-    # - X：仅对目录（或原本有可执行位的文件）补 x，避免破坏文件权限
+    # Command 3: chmod -R u+rwX ~/Library/"Application Support"/Cursor
+    # - X: Only add x to directories (or files that already had executable bit) to avoid breaking file permissions
     if chmod -R u+rwX "$cursor_support_dir" 2>/dev/null; then
-        log_info "✅ [3/4] chmod Application Support/Cursor 成功"
+        log_info "✅ [3/4] chmod Application Support/Cursor successful"
     else
-        log_warn "⚠️  [3/4] chmod Application Support/Cursor 失败"
+        log_warn "⚠️  [3/4] chmod Application Support/Cursor failed"
     fi
 
-    # 命令4: chmod -R u+rwX ~/.cursor (修复整个目录，不仅仅是extensions子目录)
+    # Command 4: chmod -R u+rwX ~/.cursor (fix entire directory, not just extensions subdirectory)
     if chmod -R u+rwX "$cursor_home_dir" 2>/dev/null; then
-        log_info "✅ [4/4] chmod .cursor 成功"
+        log_info "✅ [4/4] chmod .cursor successful"
     else
-        log_warn "⚠️  [4/4] chmod .cursor 失败"
+        log_warn "⚠️  [4/4] chmod .cursor failed"
     fi
 
-    log_info "✅ [完成] 核心权限修复命令执行完成"
+    log_info "✅ [Complete] Core permission fix commands execution complete"
     return 0
 }
 
-#  关键权限修复函数（简化版本）
+#  Critical permission fix function (simplified version)
 fix_cursor_permissions_critical() {
-    log_info "🚨 [关键权限修复] 执行权限修复..."
+    log_info "🚨 [Critical Permission Fix] Executing permission fix..."
     ensure_cursor_directory_permissions
 }
 
-# 🚀 Cursor启动前权限确保（简化版本）
+# 🚀 Cursor pre-startup permission ensure (simplified version)
 ensure_cursor_startup_permissions() {
-    log_info "🚀 [启动前权限] 执行权限修复..."
+    log_info "🚀 [Pre-startup Permissions] Executing permission fix..."
     ensure_cursor_directory_permissions
 }
 
@@ -435,34 +435,34 @@ ensure_cursor_startup_permissions() {
 
 
 
-# 🛠️ 修改机器码配置（增强版）
+# 🛠️ Modify machine code config (enhanced version)
 modify_machine_code_config() {
     local mode=${1:-"FULL"}
 
     echo
-    log_info "🛠️  [配置] 正在修改机器码配置..."
+    log_info "🛠️  [Config] Modifying machine code config..."
 
     local config_path="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/storage.json"
 
-    # 增强的配置文件检查
+    # Enhanced config file check
     if [ ! -f "$config_path" ]; then
-        log_error "❌ [错误] 配置文件不存在: $config_path"
+        log_error "❌ [Error] Config file does not exist: $config_path"
         echo
-        log_info "💡 [解决方案] 请尝试以下步骤："
-        echo -e "${BLUE}  1️⃣  手动启动Cursor应用程序${NC}"
-        echo -e "${BLUE}  2️⃣  等待Cursor完全加载（约30秒）${NC}"
-        echo -e "${BLUE}  3️⃣  关闭Cursor应用程序${NC}"
-        echo -e "${BLUE}  4️⃣  重新运行此脚本${NC}"
+        log_info "💡 [Solution] Please try the following steps:"
+        echo -e "${BLUE}  1️⃣  Manually launch the Cursor application${NC}"
+        echo -e "${BLUE}  2️⃣  Wait for Cursor to fully load (about 30 seconds)${NC}"
+        echo -e "${BLUE}  3️⃣  Close the Cursor application${NC}"
+        echo -e "${BLUE}  4️⃣  Rerun this script${NC}"
         echo
-        log_warn "⚠️  [备选方案] 如果问题持续："
-        echo -e "${BLUE}  • 选择脚本的'重置环境+修改机器码'选项${NC}"
-        echo -e "${BLUE}  • 该选项会自动生成配置文件${NC}"
+        log_warn "⚠️  [Alternative] If the problem persists:"
+        echo -e "${BLUE}  • Select the script's 'Reset Environment + Modify Machine Code' option${NC}"
+        echo -e "${BLUE}  • This option will auto-generate the config file${NC}"
         echo
 
-        # 提供用户选择
-        read -p "是否现在尝试启动Cursor生成配置文件？(y/n): " user_choice
+        # Provide user choice
+        read -p "Try to launch Cursor now to generate config file? (y/n): " user_choice
         if [[ "$user_choice" =~ ^(y|yes)$ ]]; then
-            log_info "🚀 [尝试] 正在尝试启动Cursor..."
+            log_info "🚀 [Attempt] Attempting to launch Cursor..."
             if start_cursor_to_generate_config; then
                 return 0
             fi
@@ -471,19 +471,19 @@ modify_machine_code_config() {
         return 1
     fi
 
-    # 验证配置文件格式并显示结构
-    log_info "🔍 [验证] 检查配置文件格式..."
-    # 🔧 修复：避免把路径直接拼进 Python 源码字符串（路径包含引号等特殊字符时会导致语法错误）
+    # Verify config file format and display structure
+    log_info "🔍 [Verify] Checking config file format..."
+    # 🔧 Fix: Avoid directly concatenating path into Python source string (paths containing quotes and special chars cause syntax errors)
     if ! python3 -c 'import json, sys; json.load(open(sys.argv[1], "r", encoding="utf-8"))' "$config_path" 2>/dev/null; then
-        log_error "❌ [错误] 配置文件格式错误或损坏"
-        log_info "💡 [建议] 配置文件可能已损坏，建议选择'重置环境+修改机器码'选项"
+        log_error "❌ [Error] Config file format error or corrupted"
+        log_info "💡 [Suggestion] Config file may be corrupted, suggest selecting 'Reset Environment + Modify Machine Code' option"
         return 1
     fi
-    log_info "✅ [验证] 配置文件格式正确"
+    log_info "✅ [Verify] Config file format correct"
 
-    # 显示当前配置文件中的相关属性
-    log_info "📋 [当前配置] 检查现有的遥测属性："
-    # 🔧 使用 heredoc 传递 Python 脚本：避免多行 `python3 -c` 的缩进/引号问题（IndentationError）
+    # Display relevant properties in current config file
+    log_info "📋 [Current Config] Checking existing telemetry properties:"
+    # 🔧 Use heredoc to pass Python script: avoid multiline `python3 -c` indentation/quote issues (IndentationError)
     if ! python3 - "$config_path" <<'PY'
 import json
 import sys
@@ -500,26 +500,26 @@ try:
             display_value = value[:20] + "..." if len(value) > 20 else value
             print(f"  ✓ {prop} = {display_value}")
         else:
-            print(f"  - {prop} (不存在，将创建)")
+            print(f"  - {prop} (does not exist, will create)")
 except Exception as e:
     print(f"Error reading config: {e}")
 PY
     then
-        log_warn "⚠️  [当前配置] 读取/打印遥测属性失败，但不影响后续修改流程"
+        log_warn "⚠️  [Current Config] Failed to read/print telemetry properties, but this does not affect subsequent modification process"
     fi
     echo
 
-    # 显示操作进度
-    log_info "⏳ [进度] 1/5 - 生成新的设备标识符..."
+    # Display operation progress
+    log_info "⏳ [Progress] 1/5 - Generating new device identifiers..."
 
-    # 生成新的ID
+    # Generate new IDs
     local MAC_MACHINE_ID=$(generate_uuid)
     local UUID=$(generate_uuid)
     local MACHINE_ID=$(generate_hex_bytes 32)
     local SQM_ID="{$(generate_uuid | tr '[:lower:]' '[:upper:]')}"
-    # 🔧 新增: serviceMachineId (用于 storage.serviceMachineId)
+    # 🔧 New: serviceMachineId (for storage.serviceMachineId)
     local SERVICE_MACHINE_ID=$(generate_uuid)
-    # 🔧 新增: firstSessionDate (重置首次会话日期)
+    # 🔧 New: firstSessionDate (reset first session date)
     local FIRST_SESSION_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
 
     CURSOR_ID_MACHINE_ID="$MACHINE_ID"
@@ -530,48 +530,48 @@ PY
     CURSOR_ID_SESSION_ID=$(generate_uuid)
     CURSOR_ID_MAC_ADDRESS="${CURSOR_ID_MAC_ADDRESS:-00:11:22:33:44:55}"
 
-    log_info "✅ [进度] 1/5 - 设备标识符生成完成"
+    log_info "✅ [Progress] 1/5 - Device identifier generation complete"
 
-    log_info "⏳ [进度] 2/5 - 创建备份目录..."
+    log_info "⏳ [Progress] 2/5 - Creating backup directory..."
 
-    # 备份原始配置（增强版）
+    # Backup original config (enhanced version)
     local backup_dir="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/backups"
     if ! mkdir -p "$backup_dir"; then
-        log_error "❌ [错误] 无法创建备份目录: $backup_dir"
+        log_error "❌ [Error] Unable to create backup directory: $backup_dir"
         return 1
     fi
 
     local backup_name="storage.json.backup_$(date +%Y%m%d_%H%M%S)"
     local backup_path="$backup_dir/$backup_name"
 
-    log_info "⏳ [进度] 3/5 - 备份原始配置..."
+    log_info "⏳ [Progress] 3/5 - Backing up original config..."
     if ! cp "$config_path" "$backup_path"; then
-        log_error "❌ [错误] 备份配置文件失败"
+        log_error "❌ [Error] Failed to backup config file"
         return 1
     fi
 
-    # 验证备份是否成功
+    # Verify backup success
     if [ -f "$backup_path" ]; then
         local backup_size=$(wc -c < "$backup_path")
         local original_size=$(wc -c < "$config_path")
         if [ "$backup_size" -eq "$original_size" ]; then
-            log_info "✅ [进度] 3/5 - 配置备份成功: $backup_name"
+            log_info "✅ [Progress] 3/5 - Config backup successful: $backup_name"
         else
-            log_warn "⚠️  [警告] 备份文件大小不匹配，但继续执行"
+            log_warn "⚠️  [Warning] Backup file size mismatch, but continuing"
         fi
     else
-        log_error "❌ [错误] 备份文件创建失败"
+        log_error "❌ [Error] Backup file creation failed"
         return 1
     fi
 
-    log_info "⏳ [进度] 4/5 - 更新配置文件..."
+    log_info "⏳ [Progress] 4/5 - Updating config file..."
 
-    # 使用Python修改JSON配置（更可靠，安全方式）
-    # 🔧 修复：避免把路径/值直接拼进 Python 源码字符串（引号/反斜杠等特殊字符会导致语法错误或写入错误）
+    # Use Python to modify JSON config (more reliable, safe method)
+    # 🔧 Fix: Avoid directly concatenating path/value into Python source string (quotes/backslashes and special chars cause syntax errors or write errors)
     local python_result
     local python_exit_code
-    # 🔧 使用 heredoc 传递 Python 脚本，避免多行 `python3 -c` 的缩进/引号问题
-    # 🔧 同时临时关闭 set -e：确保 Python 非0 时可以走到后续错误处理/回滚逻辑
+    # 🔧 Use heredoc to pass Python script, avoid multiline `python3 -c` indentation/quote issues
+    # 🔧 Also temporarily disable set -e: ensure Python non-zero exit can reach subsequent error handling/rollback logic
     set +e
     python_result=$(python3 - "$config_path" "$MACHINE_ID" "$MAC_MACHINE_ID" "$UUID" "$SQM_ID" "$SERVICE_MACHINE_ID" "$FIRST_SESSION_DATE" <<'PY' 2>&1
 import json
@@ -589,8 +589,8 @@ try:
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    # 安全更新配置，确保属性存在
-    # 🔧 修复: 添加 storage.serviceMachineId 和 telemetry.firstSessionDate
+    # Safely update config, ensure properties exist
+    # 🔧 Fix: Add storage.serviceMachineId and telemetry.firstSessionDate
     properties_to_update = {
         "telemetry.machineId": machine_id,
         "telemetry.macMachineId": mac_machine_id,
@@ -602,9 +602,9 @@ try:
 
     for key, value in properties_to_update.items():
         if key in config:
-            print(f"  ✓ 更新属性: {key}")
+            print(f"  ✓ Update property: {key}")
         else:
-            print(f"  + 添加属性: {key}")
+            print(f"  + Add property: {key}")
         config[key] = value
 
     with open(config_path, "w", encoding="utf-8") as f:
@@ -619,37 +619,37 @@ PY
     python_exit_code=$?
     set -e
 
-    # 🔧 关键修复：正确解析Python执行结果
+    # 🔧 Critical fix: Correctly parse Python execution result
     local python_success=false
 
-    # 检查Python脚本是否成功执行
+    # Check if Python script executed successfully
     if [ $python_exit_code -eq 0 ]; then
-        # 检查输出中是否包含SUCCESS标记（忽略其他输出）
+        # Check if output contains SUCCESS marker (ignore other output)
         if echo "$python_result" | grep -q "SUCCESS"; then
             python_success=true
-            log_info "✅ [Python] 配置修改执行成功"
+            log_info "✅ [Python] Config modification executed successfully"
         else
-            log_warn "⚠️  [Python] 执行成功但未找到SUCCESS标记"
-            log_info "💡 [调试] Python完整输出:"
+            log_warn "⚠️  [Python] Execution succeeded but SUCCESS marker not found"
+            log_info "💡 [Debug] Python full output:"
             echo "$python_result"
         fi
     else
-        log_error "❌ [Python] 脚本执行失败，退出码: $python_exit_code"
-        log_info "💡 [调试] Python完整输出:"
+        log_error "❌ [Python] Script execution failed, exit code: $python_exit_code"
+        log_info "💡 [Debug] Python full output:"
         echo "$python_result"
     fi
 
     if [ "$python_success" = true ]; then
-        log_info "⏳ [进度] 5/5 - 验证修改结果..."
+        log_info "⏳ [Progress] 5/5 - Verifying modification results..."
 
-        # 🔒 关键修复：在验证前确保文件权限正确
+        # 🔒 Critical fix: Ensure file permissions are correct before verification
         chmod 644 "$config_path" 2>/dev/null || true
 
-        # 验证修改是否成功
-        # 🔧 修复：避免把路径/值直接拼进 Python 源码字符串（引号/反斜杠等特殊字符会导致语法错误或写入错误）
+        # Verify modification success
+        # 🔧 Fix: Avoid directly concatenating path/value into Python source string (quotes/backslashes and special chars cause syntax errors or write errors)
         local verification_result
         local verification_exit_code
-        # 🔧 使用 heredoc 传递 Python 脚本，避免多行 `python3 -c` 的缩进/引号问题
+        # 🔧 Use heredoc to pass Python script, avoid multiline `python3 -c` indentation/quote issues
         set +e
         verification_result=$(python3 - "$config_path" "$MACHINE_ID" "$MAC_MACHINE_ID" "$UUID" "$SQM_ID" "$SERVICE_MACHINE_ID" "$FIRST_SESSION_DATE" <<'PY' 2>&1
 import json
@@ -667,7 +667,7 @@ try:
     with open(config_path, "r", encoding="utf-8") as f:
         config = json.load(f)
 
-    # 🔧 修复: 添加 storage.serviceMachineId 和 telemetry.firstSessionDate 验证
+    # 🔧 Fix: Add storage.serviceMachineId and telemetry.firstSessionDate verification
     properties_to_check = {
         "telemetry.machineId": machine_id,
         "telemetry.macMachineId": mac_machine_id,
@@ -681,9 +681,9 @@ try:
     for key, expected_value in properties_to_check.items():
         actual_value = config.get(key)
         if actual_value == expected_value:
-            print(f"✓ {key}: 验证通过")
+            print(f"✓ {key}: Verification passed")
         else:
-            print(f"✗ {key}: 验证失败 (期望: {expected_value}, 实际: {actual_value})")
+            print(f"✗ {key}: Verification failed (Expected: {expected_value}, Actual: {actual_value})")
             verification_passed = False
 
     if verification_passed:
@@ -698,23 +698,23 @@ PY
         verification_exit_code=$?
         set -e
 
-        # 检查验证结果（忽略其他输出，只关注最终结果）
+        # Check verification result (ignore other output, only focus on final result)
         if echo "$verification_result" | grep -q "VERIFICATION_SUCCESS"; then
-            log_info "✅ [进度] 5/5 - 修改验证成功"
+            log_info "✅ [Progress] 5/5 - Modification verification successful"
 
-            # 🔐 关键修复：设置配置文件为只读保护
+            # 🔐 Critical fix: Set config file to read-only protection
             if chmod 444 "$config_path" 2>/dev/null; then
-                log_info "🔐 [保护] 配置文件已设置为只读保护"
+                log_info "🔐 [Protect] Config file set to read-only protection"
             else
-                log_warn "⚠️  [警告] 无法设置配置文件只读保护"
+                log_warn "⚠️  [Warning] Unable to set config file read-only protection"
             fi
 
-            # 🛡️ 关键修复：执行权限修复
+            # 🛡️ Critical fix: Execute permission fix
             ensure_cursor_directory_permissions
 
             echo
-            log_info "🎉 [成功] 机器码配置修改完成！"
-            log_info "📋 [详情] 已更新以下标识符："
+            log_info "🎉 [Success] Machine code config modification complete!"
+            log_info "📋 [Details] Updated the following identifiers:"
             echo "   🔹 machineId: ${MACHINE_ID:0:20}..."
             echo "   🔹 macMachineId: $MAC_MACHINE_ID"
             echo "   🔹 devDeviceId: $UUID"
@@ -722,80 +722,80 @@ PY
             echo "   🔹 serviceMachineId: $SERVICE_MACHINE_ID"
             echo "   🔹 firstSessionDate: $FIRST_SESSION_DATE"
             echo
-            log_info "💾 [备份] 原配置已备份至: $backup_name"
+            log_info "💾 [Backup] Original config backed up to: $backup_name"
 
-            # 🔧 新增: 修改 machineid 文件
-            log_info "🔧 [machineid] 正在修改 machineid 文件..."
+            # 🔧 New: Modify machineid file
+            log_info "🔧 [machineid] Modifying machineid file..."
             local machineid_file_path="$TARGET_HOME/Library/Application Support/Cursor/machineid"
             if [ -f "$machineid_file_path" ]; then
-                # 备份原始 machineid 文件
+                # Backup original machineid file
                 local machineid_backup="$backup_dir/machineid.backup_$(date +%Y%m%d_%H%M%S)"
                 cp "$machineid_file_path" "$machineid_backup" 2>/dev/null && \
-                    log_info "💾 [备份] machineid 文件已备份: $machineid_backup"
+                    log_info "💾 [Backup] machineid file backed up: $machineid_backup"
             fi
-            # 写入新的 serviceMachineId 到 machineid 文件
+            # Write new serviceMachineId to machineid file
             if echo -n "$SERVICE_MACHINE_ID" > "$machineid_file_path" 2>/dev/null; then
-                log_info "✅ [machineid] machineid 文件修改成功: $SERVICE_MACHINE_ID"
-                # 设置 machineid 文件为只读
+                log_info "✅ [machineid] machineid file modified successfully: $SERVICE_MACHINE_ID"
+                # Set machineid file as read-only
                 chmod 444 "$machineid_file_path" 2>/dev/null && \
-                    log_info "🔒 [保护] machineid 文件已设置为只读"
+                    log_info "🔒 [Protect] machineid file set to read-only"
             else
-                log_warn "⚠️  [machineid] machineid 文件修改失败"
-                log_info "💡 [提示] 可手动修改文件: $machineid_file_path"
+                log_warn "⚠️  [machineid] machineid file modification failed"
+                log_info "💡 [Tip] Can manually modify file: $machineid_file_path"
             fi
 
-            # 🔧 新增: 修改 .updaterId 文件（更新器设备标识符）
-            log_info "🔧 [updaterId] 正在修改 .updaterId 文件..."
+            # 🔧 New: Modify .updaterId file (updater device identifier)
+            log_info "🔧 [updaterId] Modifying .updaterId file..."
             local updater_id_file_path="$TARGET_HOME/Library/Application Support/Cursor/.updaterId"
             if [ -f "$updater_id_file_path" ]; then
-                # 备份原始 .updaterId 文件
+                # Backup original .updaterId file
                 local updater_id_backup="$backup_dir/.updaterId.backup_$(date +%Y%m%d_%H%M%S)"
                 cp "$updater_id_file_path" "$updater_id_backup" 2>/dev/null && \
-                    log_info "💾 [备份] .updaterId 文件已备份: $updater_id_backup"
+                    log_info "💾 [Backup] .updaterId file backed up: $updater_id_backup"
             fi
-            # 生成新的 updaterId（UUID格式）
+            # Generate new updaterId (UUID format)
             local new_updater_id=$(generate_uuid)
             if echo -n "$new_updater_id" > "$updater_id_file_path" 2>/dev/null; then
-                log_info "✅ [updaterId] .updaterId 文件修改成功: $new_updater_id"
-                # 设置 .updaterId 文件为只读
+                log_info "✅ [updaterId] .updaterId file modified successfully: $new_updater_id"
+                # Set .updaterId file as read-only
                 chmod 444 "$updater_id_file_path" 2>/dev/null && \
-                    log_info "🔒 [保护] .updaterId 文件已设置为只读"
+                    log_info "🔒 [Protect] .updaterId file set to read-only"
             else
-                log_warn "⚠️  [updaterId] .updaterId 文件修改失败"
-                log_info "💡 [提示] 可手动修改文件: $updater_id_file_path"
+                log_warn "⚠️  [updaterId] .updaterId file modification failed"
+                log_info "💡 [Tip] Can manually modify file: $updater_id_file_path"
             fi
 
             return 0
         else
-            log_error "❌ [错误] 修改验证失败"
-            log_info "💡 [验证详情]:"
+            log_error "❌ [Error] Modification verification failed"
+            log_info "💡 [Verification Details]:"
             echo "$verification_result"
-            log_info "🔄 [恢复] 正在恢复备份并修复权限..."
+            log_info "🔄 [Restore] Restoring backup and fixing permissions..."
 
-            # 恢复备份并确保权限正确
+            # Restore backup and ensure permissions are correct
             if cp "$backup_path" "$config_path"; then
                 chmod 644 "$config_path" 2>/dev/null || true
                 ensure_cursor_directory_permissions
-                log_info "✅ [恢复] 已恢复原始配置并修复权限"
+                log_info "✅ [Restore] Original config restored and permissions fixed"
             else
-                log_error "❌ [错误] 恢复备份失败"
+                log_error "❌ [Error] Restore backup failed"
             fi
             return 1
         fi
     else
-        log_error "❌ [错误] 修改配置失败"
-        log_info "💡 [调试信息] Python执行详情:"
+        log_error "❌ [Error] Config modification failed"
+        log_info "💡 [Debug Info] Python execution details:"
         echo "$python_result"
 
-        # 尝试恢复备份并修复权限
+        # Try to restore backup and fix permissions
         if [ -f "$backup_path" ]; then
-            log_info "🔄 [恢复] 正在恢复备份配置并修复权限..."
+            log_info "🔄 [Restore] Restoring backup config and fixing permissions..."
             if cp "$backup_path" "$config_path"; then
                 chmod 644 "$config_path" 2>/dev/null || true
                 ensure_cursor_directory_permissions
-                log_info "✅ [恢复] 已恢复原始配置并修复权限"
+                log_info "✅ [Restore] Original config restored and permissions fixed"
             else
-                log_error "❌ [错误] 恢复备份失败"
+                log_error "❌ [Error] Restore backup failed"
             fi
         fi
 
@@ -805,7 +805,7 @@ PY
 
 
 
-# 获取当前用户
+# Get current user
 get_current_user() {
     if [ "$EUID" -eq 0 ]; then
         echo "$SUDO_USER"
@@ -814,7 +814,7 @@ get_current_user() {
     fi
 }
 
-# 获取指定用户的 Home 目录（用于 sudo 环境下仍能定位到真实用户目录）
+# Get specified user's Home directory (for sudo environments to still locate real user directory)
 get_user_home_dir() {
     local user="$1"
     local home_dir=""
@@ -824,17 +824,17 @@ get_user_home_dir() {
         return 1
     fi
 
-    # macOS：优先使用 dscl，避免 sudo -H / env_reset 影响 $HOME
+    # macOS: Prefer dscl, avoid sudo -H / env_reset affecting $HOME
     if command -v dscl >/dev/null 2>&1; then
         home_dir=$(dscl . -read "/Users/$user" NFSHomeDirectory 2>/dev/null | awk '{print $2}')
     fi
 
-    # 回退：使用 shell 的 ~ 展开（某些环境 dscl 读取可能失败）
+    # Fallback: Use shell ~ expansion (some environments dscl read may fail)
     if [ -z "$home_dir" ]; then
         home_dir=$(eval echo "~$user" 2>/dev/null)
     fi
 
-    # 最终回退：当前环境的 $HOME（至少保证脚本不因空值崩溃）
+    # Final fallback: Current environment $HOME (at least ensure script doesn't crash on empty value)
     if [ -z "$home_dir" ]; then
         home_dir="$HOME"
     fi
@@ -845,19 +845,19 @@ get_user_home_dir() {
 
 CURRENT_USER=$(get_current_user)
 if [ -z "$CURRENT_USER" ]; then
-    log_error "无法获取用户名"
+    log_error "Unable to get username"
     exit 1
 fi
 
-# 🎯 统一“目标用户/目标 Home”：后续所有 Cursor 用户数据路径均基于该 Home
+# 🎯 Unified "target user/target Home": All subsequent Cursor user data paths are based on this Home
 TARGET_USER="$CURRENT_USER"
 TARGET_HOME="$(get_user_home_dir "$TARGET_USER")"
 
-# 定义配置文件路径
+# Define config file paths
 STORAGE_FILE="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/storage.json"
 BACKUP_DIR="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/backups"
 
-# 共享ID（用于配置与JS注入保持一致）
+# Shared IDs (for config and JS injection consistency)
 CURSOR_ID_MACHINE_ID=""
 CURSOR_ID_MACHINE_GUID=""
 CURSOR_ID_MAC_MACHINE_ID=""
@@ -867,27 +867,27 @@ CURSOR_ID_FIRST_SESSION_DATE=""
 CURSOR_ID_SESSION_ID=""
 CURSOR_ID_MAC_ADDRESS="00:11:22:33:44:55"
 
-# 定义 Cursor 应用程序路径
+# Define Cursor application path
 CURSOR_APP_PATH="/Applications/Cursor.app"
 
-# 新增：判断接口类型是否为Wi-Fi
+# New: Determine if interface type is Wi-Fi
 is_wifi_interface() {
     local interface_name="$1"
-    # 通过networksetup判断接口类型
+    # Determine interface type via networksetup
     networksetup -listallhardwareports | \
         awk -v dev="$interface_name" 'BEGIN{found=0} /Hardware Port: Wi-Fi/{found=1} /Device:/{if(found && $2==dev){exit 0}else{found=0}}' && return 0 || return 1
 }
 
-# 🎯 增强的MAC地址生成和验证（集成randommac.sh特性）
+# 🎯 Enhanced MAC address generation and validation (integrated randommac.sh features)
 generate_local_unicast_mac() {
-    # 第一字节：LAA+单播（低两位10），其余随机
+    # First byte: LAA+unicast (low two bits 10), rest random
     local first_byte=$(( (RANDOM & 0xFC) | 0x02 ))
     local mac=$(printf '%02x:%02x:%02x:%02x:%02x:%02x' \
         $first_byte $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256)))
     echo "$mac"
 }
 
-# 🔍 MAC地址验证函数（基于randommac.sh）
+# 🔍 MAC address validation function (based on randommac.sh)
 validate_mac_address() {
     local mac="$1"
     local regex="^([0-9A-Fa-f]{2}[:]){5}([0-9A-Fa-f]{2})$"
@@ -901,34 +901,34 @@ validate_mac_address() {
 
 
 
-# 🔄 增强的WiFi断开和重连机制
+# 🔄 Enhanced WiFi disconnect and reconnect mechanism
 manage_wifi_connection() {
-    local action="$1"  # disconnect 或 reconnect
+    local action="$1"  # disconnect or reconnect
     local interface_name="$2"
 
     if ! is_wifi_interface "$interface_name"; then
-        log_info "📡 [跳过] 接口 '$interface_name' 不是WiFi，跳过WiFi管理"
+        log_info "📡 [Skip] Interface '$interface_name' is not WiFi, skipping WiFi management"
         return 0
     fi
 
     case "$action" in
         "disconnect")
-            log_info "📡 [WiFi] 断开WiFi连接但保持适配器开启..."
+            log_info "📡 [WiFi] Disconnecting WiFi connection but keeping adapter on..."
 
-            # 方法1: 使用airport工具断开
+            # Method 1: Use airport tool to disconnect
             if command -v /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport >/dev/null 2>&1; then
                 sudo /System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport -z 2>>"$LOG_FILE"
-                log_info "✅ [WiFi] 使用airport工具断开WiFi连接"
+                log_info "✅ [WiFi] Disconnected WiFi using airport tool"
             else
-                # 方法2: 使用networksetup断开
+                # Method 2: Use networksetup to disconnect
                 local wifi_service=$(networksetup -listallhardwareports | grep -A1 "Device: $interface_name" | grep "Hardware Port:" | cut -d: -f2 | xargs)
                 if [ -n "$wifi_service" ]; then
                     networksetup -setairportpower "$interface_name" off 2>>"$LOG_FILE"
                     sleep 2
                     networksetup -setairportpower "$interface_name" on 2>>"$LOG_FILE"
-                    log_info "✅ [WiFi] 使用networksetup重置WiFi适配器"
+                    log_info "✅ [WiFi] Reset WiFi adapter using networksetup"
                 else
-                    log_warn "⚠️  [WiFi] 无法找到WiFi服务，跳过断开"
+                    log_warn "⚠️  [WiFi] Unable to find WiFi service, skipping disconnect"
                 fi
             fi
 
@@ -936,49 +936,49 @@ manage_wifi_connection() {
             ;;
 
         "reconnect")
-            log_info "📡 [WiFi] 重新连接WiFi..."
+            log_info "📡 [WiFi] Reconnecting WiFi..."
 
-            # 触发网络硬件重新检测
+            # Trigger network hardware redetection
             sudo networksetup -detectnewhardware 2>>"$LOG_FILE"
 
-            # 等待网络重新连接
-            log_info "⏳ [WiFi] 等待WiFi重新连接..."
+            # Wait for network reconnection
+            log_info "⏳ [WiFi] Waiting for WiFi reconnection..."
             local wait_count=0
             local max_wait=30
 
             while [ $wait_count -lt $max_wait ]; do
                 if ping -c 1 8.8.8.8 >/dev/null 2>&1; then
-                    log_info "✅ [WiFi] 网络连接已恢复"
+                    log_info "✅ [WiFi] Network connection restored"
                     return 0
                 fi
                 sleep 2
                 wait_count=$((wait_count + 2))
 
                 if [ $((wait_count % 10)) -eq 0 ]; then
-                    log_info "⏳ [WiFi] 等待网络连接... ($wait_count/$max_wait 秒)"
+                    log_info "⏳ [WiFi] Waiting for network connection... ($wait_count/$max_wait sec)"
                 fi
             done
 
-            log_warn "⚠️  [WiFi] 网络连接未在预期时间内恢复，但继续执行"
+            log_warn "⚠️  [WiFi] Network connection did not restore within expected time, but continuing"
             ;;
 
         *)
-            log_error "❌ [错误] 无效的WiFi管理操作: $action"
+            log_error "❌ [Error] Invalid WiFi management action: $action"
             return 1
             ;;
     esac
 }
 
-# 🛠️ 增强的第三方工具MAC地址修改
+# 🛠️ Enhanced third-party tool MAC address modification
 try_third_party_mac_tool() {
     local interface_name="$1"
     local random_mac="$2"
     local success=false
     local tool_used=""
 
-    log_info "🛠️  [第三方] 尝试使用第三方工具修改MAC地址"
+    log_info "🛠️  [Third-party] Attempting to modify MAC address using third-party tools"
 
-    # 🔍 检测可用的第三方工具
+    # 🔍 Detect available third-party tools
     local available_tools=()
     if command -v macchanger >/dev/null 2>&1; then
         available_tools+=("macchanger")
@@ -988,101 +988,101 @@ try_third_party_mac_tool() {
     fi
 
     if [ ${#available_tools[@]} -eq 0 ]; then
-        log_warn "⚠️  [警告] 未检测到可用的第三方MAC地址修改工具"
-        log_info "💡 [建议] 可以安装以下工具："
+        log_warn "⚠️  [Warning] No available third-party MAC address modification tools detected"
+        log_info "💡 [Suggestion] You can install the following tools:"
         echo "     • brew install spoof-mac"
         echo "     • brew install macchanger"
         return 1
     fi
 
-    log_info "🔍 [检测] 发现可用工具: ${available_tools[*]}"
+    log_info "🔍 [Detect] Available tools found: ${available_tools[*]}"
 
-    # 🎯 优先使用macchanger
+    # 🎯 Prefer macchanger
     if [[ " ${available_tools[*]} " =~ " macchanger " ]]; then
-        log_info "🔧 [macchanger] 尝试使用macchanger修改接口 '$interface_name' 的MAC地址..."
+        log_info "🔧 [macchanger] Attempting to modify interface '$interface_name' MAC address using macchanger..."
 
-        # 先关闭接口
+        # First disable interface
         sudo ifconfig "$interface_name" down 2>>"$LOG_FILE"
         sleep 2
 
         if sudo macchanger -m "$random_mac" "$interface_name" >>"$LOG_FILE" 2>&1; then
             success=true
             tool_used="macchanger"
-            log_info "✅ [成功] macchanger修改成功"
+            log_info "✅ [Success] macchanger modification successful"
         else
-            log_warn "⚠️  [失败] macchanger修改失败"
+            log_warn "⚠️  [Failed] macchanger modification failed"
         fi
 
-        # 重新启用接口
+        # Re-enable interface
         sudo ifconfig "$interface_name" up 2>>"$LOG_FILE"
         sleep 2
     fi
 
-    # 🎯 如果macchanger失败，尝试spoof-mac
+    # 🎯 If macchanger fails, try spoof-mac
     if ! $success && [[ " ${available_tools[*]} " =~ " spoof-mac " ]]; then
-        log_info "🔧 [spoof-mac] 尝试使用spoof-mac修改接口 '$interface_name' 的MAC地址..."
+        log_info "🔧 [spoof-mac] Attempting to modify interface '$interface_name' MAC address using spoof-mac..."
 
         if sudo spoof-mac set "$random_mac" "$interface_name" >>"$LOG_FILE" 2>&1; then
             success=true
             tool_used="spoof-mac"
-            log_info "✅ [成功] spoof-mac修改成功"
+            log_info "✅ [Success] spoof-mac modification successful"
         else
-            log_warn "⚠️  [失败] spoof-mac修改失败"
+            log_warn "⚠️  [Failed] spoof-mac modification failed"
         fi
     fi
 
     if $success; then
-        log_info "🎉 [成功] 第三方工具 ($tool_used) 修改MAC地址成功"
+        log_info "🎉 [Success] Third-party tool ($tool_used) MAC address modification successful"
         return 0
     else
-        log_error "❌ [失败] 所有第三方工具都修改失败"
+        log_error "❌ [Failed] All third-party tools failed to modify"
         return 1
     fi
 }
 
-# 🔍 增强的macOS环境检测和兼容性评估
+# 🔍 Enhanced macOS environment detection and compatibility assessment
 detect_macos_environment() {
     local macos_version=$(sw_vers -productVersion)
     local macos_major=$(echo "$macos_version" | cut -d. -f1)
     local macos_minor=$(echo "$macos_version" | cut -d. -f2)
     local hardware_type=""
 
-    # 检测硬件类型
+    # Detect hardware type
     if [[ $(uname -m) == "arm64" ]]; then
         hardware_type="Apple Silicon"
     else
         hardware_type="Intel"
     fi
 
-    log_info "🔍 [环境] 系统环境检测: macOS $macos_version ($hardware_type)"
+    log_info "🔍 [Environment] System environment detection: macOS $macos_version ($hardware_type)"
 
-    # 检查SIP状态
+    # Check SIP status
     local sip_status=$(csrutil status 2>/dev/null | grep -o "enabled\|disabled" || echo "unknown")
-    log_info "🔒 [SIP] 系统完整性保护状态: $sip_status"
+    log_info "🔒 [SIP] System Integrity Protection status: $sip_status"
 
-    # 设置环境变量
+    # Set environment variables
     export MACOS_VERSION="$macos_version"
     export MACOS_MAJOR="$macos_major"
     export MACOS_MINOR="$macos_minor"
     export HARDWARE_TYPE="$hardware_type"
     export SIP_STATUS="$sip_status"
 
-    # 🎯 增强的兼容性检查
+    # 🎯 Enhanced compatibility check
     local compatibility_level="FULL"
     local compatibility_issues=()
 
-    # 检查macOS版本兼容性
+    # Check macOS version compatibility
     if [[ $macos_major -ge 14 ]]; then
-        compatibility_issues+=("macOS $macos_major+ 对MAC地址修改有严格限制")
+        compatibility_issues+=("macOS $macos_major+ has strict restrictions on MAC address modification")
         compatibility_level="LIMITED"
     elif [[ $macos_major -ge 12 ]]; then
-        compatibility_issues+=("macOS $macos_major 可能对MAC地址修改有部分限制")
+        compatibility_issues+=("macOS $macos_major may have partial restrictions on MAC address modification")
         compatibility_level="PARTIAL"
     fi
 
-    # 检查硬件兼容性
+    # Check hardware compatibility
     if [[ "$hardware_type" == "Apple Silicon" ]]; then
-        compatibility_issues+=("Apple Silicon硬件对MAC地址修改有硬件级限制")
+        compatibility_issues+=("Apple Silicon hardware has hardware-level restrictions on MAC address modification")
         if [[ "$compatibility_level" == "FULL" ]]; then
             compatibility_level="PARTIAL"
         else
@@ -1090,92 +1090,92 @@ detect_macos_environment() {
         fi
     fi
 
-    # 检查SIP影响
+    # Check SIP impact
     if [[ "$sip_status" == "enabled" ]]; then
-        compatibility_issues+=("系统完整性保护(SIP)可能阻止某些修改方法")
+        compatibility_issues+=("System Integrity Protection (SIP) may block certain modification methods")
     fi
 
-    # 设置兼容性级别
+    # Set compatibility level
     export MAC_COMPATIBILITY_LEVEL="$compatibility_level"
 
-    # 显示兼容性评估结果
+    # Display compatibility assessment results
     case "$compatibility_level" in
         "FULL")
-            log_info "✅ [兼容性] 完全兼容 - 支持所有MAC地址修改方法"
+            log_info "✅ [Compatibility] Fully compatible - supports all MAC address modification methods"
             ;;
         "PARTIAL")
-            log_warn "⚠️  [兼容性] 部分兼容 - 某些方法可能失败"
+            log_warn "⚠️  [Compatibility] Partially compatible - some methods may fail"
             ;;
         "LIMITED")
-            log_warn "⚠️  [兼容性] 有限兼容 - 大多数方法可能失败"
+            log_warn "⚠️  [Compatibility] Limited compatibility - most methods may fail"
             ;;
         "MINIMAL")
-            log_error "❌ [兼容性] 最小兼容 - MAC地址修改可能完全失败"
+            log_error "❌ [Compatibility] Minimal compatibility - MAC address modification may completely fail"
             ;;
     esac
 
     if [ ${#compatibility_issues[@]} -gt 0 ]; then
-        log_info "📋 [兼容性问题]:"
+        log_info "📋 [Compatibility Issues]:"
         for issue in "${compatibility_issues[@]}"; do
             echo "     • $issue"
         done
     fi
 
-    # 返回兼容性状态
+    # Return compatibility status
     case "$compatibility_level" in
         "FULL"|"PARTIAL") return 0 ;;
         *) return 1 ;;
     esac
 }
 
-# 🚀 增强的MAC地址修改函数，支持智能方法选择
+# 🚀 Enhanced MAC address modification function with intelligent method selection
 _change_mac_for_one_interface() {
     local interface_name="$1"
 
     if [ -z "$interface_name" ]; then
-        log_error "❌ [错误] _change_mac_for_one_interface: 未提供接口名称"
+        log_error "❌ [Error] _change_mac_for_one_interface: Interface name not provided"
         return 1
     fi
 
-    log_info "🚀 [开始] 开始处理接口: $interface_name"
+    log_info "🚀 [Start] Starting to process interface: $interface_name"
     echo
 
-    # 🔍 环境检测和兼容性评估
+    # 🔍 Environment detection and compatibility assessment
     detect_macos_environment
     local env_compatible=$?
     local compatibility_level="$MAC_COMPATIBILITY_LEVEL"
 
-    # 📡 获取当前MAC地址
+    # 📡 Get current MAC address
     local current_mac=$(ifconfig "$interface_name" | awk '/ether/{print $2}')
     if [ -z "$current_mac" ]; then
-        log_warn "⚠️  [警告] 无法获取接口 '$interface_name' 的当前MAC地址，可能已禁用或不存在"
+        log_warn "⚠️  [Warning] Unable to get current MAC address for interface '$interface_name', may be disabled or does not exist"
         return 1
     else
-        log_info "📍 [当前] 接口 '$interface_name' 当前MAC地址: $current_mac"
+        log_info "📍 [Current] Interface '$interface_name' current MAC address: $current_mac"
     fi
 
-    # 🎯 自动生成新MAC地址
+    # 🎯 Auto-generate new MAC address
     local random_mac=$(generate_local_unicast_mac)
-    log_info "🎲 [生成] 为接口 '$interface_name' 生成新MAC地址: $random_mac"
+    log_info "🎲 [Generate] Generated new MAC address for interface '$interface_name': $random_mac"
 
-    # 📋 显示修改计划
+    # 📋 Display modification plan
     echo
-    log_info "📋 [计划] MAC地址修改计划:"
-    echo "     🔹 接口: $interface_name"
-    echo "     🔹 当前MAC: $current_mac"
-    echo "     🔹 目标MAC: $random_mac"
-    echo "     🔹 兼容性: $compatibility_level"
+    log_info "📋 [Plan] MAC address modification plan:"
+    echo "     🔹 Interface: $interface_name"
+    echo "     🔹 Current MAC: $current_mac"
+    echo "     🔹 Target MAC: $random_mac"
+    echo "     🔹 Compatibility: $compatibility_level"
     echo
 
-    # 🔄 WiFi预处理
+    # 🔄 WiFi preprocessing
     manage_wifi_connection "disconnect" "$interface_name"
 
-    # 🛠️ 执行MAC地址修改（多方法尝试）
+    # 🛠️ Execute MAC address modification (multi-method attempt)
     local mac_change_success=false
     local method_used=""
     local methods_tried=()
 
-    # 📊 根据兼容性级别选择方法顺序
+    # 📊 Select method order based on compatibility level
     local method_order=()
     case "$compatibility_level" in
         "FULL")
@@ -1189,12 +1189,12 @@ _change_mac_for_one_interface() {
             ;;
     esac
 
-    log_info "🛠️  [方法] 将按以下顺序尝试修改方法: ${method_order[*]}"
+    log_info "🛠️  [Method] Will try modification methods in following order: ${method_order[*]}"
     echo
 
-    # 🔄 逐个尝试修改方法
+    # 🔄 Try modification methods one by one
     for method in "${method_order[@]}"; do
-        log_info "🔧 [尝试] 正在尝试 $method 方法..."
+        log_info "🔧 [Attempt] Attempting $method method..."
         methods_tried+=("$method")
 
         case "$method" in
@@ -1221,78 +1221,78 @@ _change_mac_for_one_interface() {
                 ;;
         esac
 
-        log_warn "⚠️  [失败] $method 方法失败，尝试下一个方法..."
+        log_warn "⚠️  [Failed] $method method failed, trying next method..."
         sleep 2
     done
 
-    # 🔍 验证修改结果
+    # 🔍 Verify modification result
     if [[ $mac_change_success == true ]]; then
-        log_info "🔍 [验证] 验证MAC地址修改结果..."
-        sleep 3  # 等待系统更新
+        log_info "🔍 [Verify] Verifying MAC address modification result..."
+        sleep 3  # Wait for system update
 
         local final_mac_check=$(ifconfig "$interface_name" | awk '/ether/{print $2}')
-        log_info "📍 [检查] 接口 '$interface_name' 最终MAC地址: $final_mac_check"
+        log_info "📍 [Check] Interface '$interface_name' final MAC address: $final_mac_check"
 
         if [ "$final_mac_check" == "$random_mac" ]; then
             echo
-            log_info "🎉 [成功] MAC地址修改成功！"
-            echo "     ✅ 使用方法: $method_used"
-            echo "     ✅ 接口: $interface_name"
-            echo "     ✅ 原MAC: $current_mac"
-            echo "     ✅ 新MAC: $final_mac_check"
+            log_info "🎉 [Success] MAC address modification successful!"
+            echo "     ✅ Method used: $method_used"
+            echo "     ✅ Interface: $interface_name"
+            echo "     ✅ Original MAC: $current_mac"
+            echo "     ✅ New MAC: $final_mac_check"
 
-            # 🔄 WiFi后处理
+            # 🔄 WiFi post-processing
             manage_wifi_connection "reconnect" "$interface_name"
 
             return 0
         else
-            log_warn "⚠️  [验证失败] MAC地址可能未生效或已被系统重置"
-            log_info "💡 [提示] 期望: $random_mac, 实际: $final_mac_check"
+            log_warn "⚠️  [Verification Failed] MAC address may not have taken effect or was reset by system"
+            log_info "💡 [Tip] Expected: $random_mac, Actual: $final_mac_check"
             mac_change_success=false
         fi
     fi
 
-    # ❌ 失败处理和用户选择
+    # ❌ Failure handling and user choice
     if [[ $mac_change_success == false ]]; then
         echo
-        log_error "❌ [失败] 所有MAC地址修改方法都失败了"
-        log_info "📋 [尝试过的方法]: ${methods_tried[*]}"
+        log_error "❌ [Failed] All MAC address modification methods failed"
+        log_info "📋 [Methods tried]: ${methods_tried[*]}"
 
-        # 🔄 WiFi恢复
+        # 🔄 WiFi recovery
         manage_wifi_connection "reconnect" "$interface_name"
 
-        # 📊 显示故障排除信息
+        # 📊 Display troubleshooting info
         _show_troubleshooting_info "$interface_name"
 
-        # 🎯 提供用户选择
+        # 🎯 Provide user choice
         echo
-        echo -e "${BLUE}💡 [说明]${NC} MAC地址修改失败，您可以选择："
-        echo -e "${BLUE}💡 [备注]${NC} 如果所有接口都失败，脚本会自动尝试JS内核修改方案"
+        echo -e "${BLUE}💡 [Note]${NC} MAC address modification failed, you can choose:"
+        echo -e "${BLUE}💡 [Note]${NC} If all interfaces fail, the script will automatically try the JS kernel modification solution"
         echo
 
-        # 简化的用户选择
-        echo "请选择操作："
-        echo "  1. 重试本接口"
-        echo "  2. 跳过本接口"
-        echo "  3. 退出脚本"
+        # Simplified user choice
+        echo "Please select an action:"
+        echo "  1. Retry this interface"
+        echo "  2. Skip this interface"
+        echo "  3. Exit script"
 
-        read -p "请输入选择 (1-3): " choice
+        read -p "Please enter choice (1-3): " choice
 
         case "$choice" in
             1)
-                log_info "🔄 [重试] 用户选择重试本接口"
+                log_info "🔄 [Retry] User chose to retry this interface"
                 _change_mac_for_one_interface "$interface_name"
                 ;;
             2)
-                log_info "⏭️  [跳过] 用户选择跳过本接口"
+                log_info "⏭️  [Skip] User chose to skip this interface"
                 return 1
                 ;;
             3)
-                log_info "🚪 [退出] 用户选择退出脚本"
+                log_info "🚪 [Exit] User chose to exit script"
                 exit 1
                 ;;
             *)
-                log_info "⏭️  [默认] 无效选择，跳过本接口"
+                log_info "⏭️  [Default] Invalid choice, skipping this interface"
                 return 1
                 ;;
         esac
@@ -1300,105 +1300,105 @@ _change_mac_for_one_interface() {
     fi
 }
 
-# 🔧 增强的传统ifconfig方法（集成WiFi管理）
+# 🔧 Enhanced traditional ifconfig method (integrated WiFi management)
 _try_ifconfig_method() {
     local interface_name="$1"
     local random_mac="$2"
 
-    log_info "🔧 [ifconfig] 使用传统ifconfig方法修改MAC地址"
+    log_info "🔧 [ifconfig] Using traditional ifconfig method to modify MAC address"
 
-    # 🔄 WiFi特殊处理已在主函数中处理，这里只需要基本的接口操作
-    log_info "📡 [接口] 临时禁用接口 '$interface_name' 以修改MAC地址..."
+    # 🔄 WiFi special handling already done in main function, here only need basic interface operations
+    log_info "📡 [Interface] Temporarily disabling interface '$interface_name' to modify MAC address..."
     if ! sudo ifconfig "$interface_name" down 2>>"$LOG_FILE"; then
-        log_error "❌ [错误] 禁用接口 '$interface_name' 失败"
+        log_error "❌ [Error] Failed to disable interface '$interface_name'"
         return 1
     fi
 
-    log_info "⏳ [等待] 等待接口完全关闭..."
+    log_info "⏳ [Wait] Waiting for interface to fully shut down..."
     sleep 3
 
-    # 🎯 尝试修改MAC地址
-    log_info "🎯 [修改] 设置新MAC地址: $random_mac"
+    # 🎯 Try to modify MAC address
+    log_info "🎯 [Modify] Setting new MAC address: $random_mac"
     if sudo ifconfig "$interface_name" ether "$random_mac" 2>>"$LOG_FILE"; then
-        log_info "✅ [成功] MAC地址设置命令执行成功"
+        log_info "✅ [Success] MAC address set command executed successfully"
 
-        # 重新启用接口
-        log_info "🔄 [启用] 重新启用接口..."
+        # Re-enable interface
+        log_info "🔄 [Enable] Re-enabling interface..."
         if sudo ifconfig "$interface_name" up 2>>"$LOG_FILE"; then
-            log_info "✅ [成功] 接口重新启用成功"
+            log_info "✅ [Success] Interface re-enabled successfully"
             sleep 2
             return 0
         else
-            log_error "❌ [错误] 重新启用接口失败"
+            log_error "❌ [Error] Failed to re-enable interface"
             return 1
         fi
     else
-        log_error "❌ [错误] ifconfig ether 命令失败"
-        log_info "🔄 [恢复] 尝试重新启用接口..."
+        log_error "❌ [Error] ifconfig ether command failed"
+        log_info "🔄 [Restore] Attempting to re-enable interface..."
         sudo ifconfig "$interface_name" up 2>/dev/null || true
         return 1
     fi
 }
 
-# 🌐 增强的networksetup方法（适用于受限环境）
+# 🌐 Enhanced networksetup method (for restricted environments)
 _try_networksetup_method() {
     local interface_name="$1"
     local random_mac="$2"
 
-    log_info "🌐 [networksetup] 尝试使用系统网络偏好设置方法"
+    log_info "🌐 [networksetup] Attempting to use system network preferences method"
 
-    # 🔍 获取硬件端口名称
+    # 🔍 Get hardware port name
     local hardware_port=$(networksetup -listallhardwareports | grep -A1 "Device: $interface_name" | grep "Hardware Port:" | cut -d: -f2 | xargs)
 
     if [ -z "$hardware_port" ]; then
-        log_warn "⚠️  [警告] 无法找到接口 $interface_name 对应的硬件端口"
-        log_info "📋 [调试] 可用硬件端口列表："
+        log_warn "⚠️  [Warning] Unable to find hardware port corresponding to interface $interface_name"
+        log_info "📋 [Debug] Available hardware port list:"
         networksetup -listallhardwareports | grep -E "(Hardware Port|Device)" | head -10
         return 1
     fi
 
-    log_info "🔍 [发现] 找到硬件端口: '$hardware_port' (设备: $interface_name)"
+    log_info "🔍 [Found] Found hardware port: '$hardware_port' (Device: $interface_name)"
 
-    # 🎯 尝试多种networksetup方法
+    # 🎯 Try multiple networksetup methods
     local methods_tried=()
 
-    # 方法1: 尝试重置网络服务
-    log_info "🔧 [方法1] 尝试重置网络服务..."
+    # Method 1: Try resetting network service
+    log_info "🔧 [Method1] Attempting to reset network service..."
     methods_tried+=("reset-service")
     if sudo networksetup -setnetworkserviceenabled "$hardware_port" off 2>>"$LOG_FILE"; then
         sleep 2
         if sudo networksetup -setnetworkserviceenabled "$hardware_port" on 2>>"$LOG_FILE"; then
-            log_info "✅ [成功] 网络服务重置成功"
+            log_info "✅ [Success] Network service reset successful"
             sleep 2
 
-            # 检测硬件变化
+            # Detect hardware changes
             sudo networksetup -detectnewhardware 2>>"$LOG_FILE"
             sleep 3
 
-            # 验证是否有效果
+            # Verify if effective
             local new_mac=$(ifconfig "$interface_name" | awk '/ether/{print $2}')
             if [ "$new_mac" != "$(ifconfig "$interface_name" | awk '/ether/{print $2}')" ]; then
-                log_info "✅ [成功] networksetup方法可能有效"
+                log_info "✅ [Success] networksetup method may be effective"
                 return 0
             fi
         fi
     fi
 
-    # 方法2: 尝试手动配置
-    log_info "🔧 [方法2] 尝试手动网络配置..."
+    # Method 2: Try manual configuration
+    log_info "🔧 [Method2] Attempting manual network configuration..."
     methods_tried+=("manual-config")
 
-    # 获取当前配置
+    # Get current configuration
     local current_config=$(networksetup -getinfo "$hardware_port" 2>/dev/null)
     if [ -n "$current_config" ]; then
-        log_info "📋 [当前配置] $hardware_port 的网络配置："
+        log_info "📋 [Current Config] Network configuration for $hardware_port:"
         echo "$current_config" | head -5
 
-        # 尝试重新应用配置以触发MAC地址更新
+        # Try reapplying configuration to trigger MAC address update
         if echo "$current_config" | grep -q "DHCP"; then
-            log_info "🔄 [DHCP] 重新应用DHCP配置..."
+            log_info "🔄 [DHCP] Reapplying DHCP configuration..."
             if sudo networksetup -setdhcp "$hardware_port" 2>>"$LOG_FILE"; then
-                log_info "✅ [成功] DHCP配置重新应用成功"
+                log_info "✅ [Success] DHCP configuration reapplied successfully"
                 sleep 3
                 sudo networksetup -detectnewhardware 2>>"$LOG_FILE"
                 return 0
@@ -1406,202 +1406,202 @@ _try_networksetup_method() {
         fi
     fi
 
-    # 方法3: 强制硬件重新检测
-    log_info "🔧 [方法3] 强制硬件重新检测..."
+    # Method 3: Force hardware redetection
+    log_info "🔧 [Method3] Forcing hardware redetection..."
     methods_tried+=("hardware-detect")
 
     if sudo networksetup -detectnewhardware 2>>"$LOG_FILE"; then
-        log_info "✅ [成功] 硬件重新检测完成"
+        log_info "✅ [Success] Hardware redetection complete"
         sleep 3
         return 0
     fi
 
-    # 所有方法都失败
-    log_error "❌ [失败] networksetup所有方法都失败"
-    log_info "📋 [尝试过的方法]: ${methods_tried[*]}"
-    log_warn "⚠️  [说明] networksetup方法在当前macOS版本中可能不支持直接MAC地址修改"
+    # All methods failed
+    log_error "❌ [Failed] All networksetup methods failed"
+    log_info "📋 [Methods tried]: ${methods_tried[*]}"
+    log_warn "⚠️  [Note] networksetup method may not support direct MAC address modification in current macOS version"
 
     return 1
 }
 
-# 📊 增强的故障排除信息显示
+# 📊 Enhanced troubleshooting info display
 _show_troubleshooting_info() {
     local interface_name="$1"
 
     echo
     echo -e "${YELLOW}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║                    MAC地址修改故障排除信息                    ║${NC}"
+    echo -e "${YELLOW}║              MAC Address Modification Troubleshooting        ║${NC}"
     echo -e "${YELLOW}╚══════════════════════════════════════════════════════════════╝${NC}"
     echo
 
-    # 🔍 系统信息
-    echo -e "${BLUE}🔍 系统环境信息:${NC}"
-    echo "  📱 macOS版本: $MACOS_VERSION"
-    echo "  💻 硬件类型: $HARDWARE_TYPE"
-    echo "  🔒 SIP状态: $SIP_STATUS"
-    echo "  🌐 接口名称: $interface_name"
-    echo "  📊 兼容性级别: ${MAC_COMPATIBILITY_LEVEL:-未知}"
+    # 🔍 System info
+    echo -e "${BLUE}🔍 System Environment Info:${NC}"
+    echo "  📱 macOS Version: $MACOS_VERSION"
+    echo "  💻 Hardware Type: $HARDWARE_TYPE"
+    echo "  🔒 SIP Status: $SIP_STATUS"
+    echo "  🌐 Interface Name: $interface_name"
+    echo "  📊 Compatibility Level: ${MAC_COMPATIBILITY_LEVEL:-Unknown}"
 
-    # 显示接口详细信息
+    # Display interface detailed info
     local interface_info=$(ifconfig "$interface_name" 2>/dev/null | head -3)
     if [ -n "$interface_info" ]; then
-        echo "  📡 接口状态:"
+        echo "  📡 Interface Status:"
         echo "$interface_info" | sed 's/^/     /'
     fi
     echo
 
-    # ⚠️ 问题分析
-    echo -e "${BLUE}⚠️  可能的问题原因:${NC}"
+    # ⚠️ Problem analysis
+    echo -e "${BLUE}⚠️  Possible Causes:${NC}"
     local issues_found=false
 
     if [[ "$HARDWARE_TYPE" == "Apple Silicon" ]] && [[ $MACOS_MAJOR -ge 12 ]]; then
-        echo "  ❌ Apple Silicon Mac在macOS 12+版本中有硬件级MAC地址修改限制"
-        echo "  ❌ 网络驱动程序可能完全禁止MAC地址修改"
+        echo "  ❌ Apple Silicon Mac has hardware-level MAC address modification restrictions in macOS 12+"
+        echo "  ❌ Network driver may completely prohibit MAC address modification"
         issues_found=true
     fi
 
     if [[ $MACOS_MAJOR -ge 14 ]]; then
-        echo "  ❌ macOS Sonoma (14+) 对MAC地址修改有严格的系统级限制"
+        echo "  ❌ macOS Sonoma (14+) has strict system-level restrictions on MAC address modification"
         issues_found=true
     elif [[ $MACOS_MAJOR -ge 12 ]]; then
-        echo "  ⚠️  macOS Monterey+ 对MAC地址修改有部分限制"
+        echo "  ⚠️  macOS Monterey+ has partial restrictions on MAC address modification"
         issues_found=true
     fi
 
     if [[ "$SIP_STATUS" == "enabled" ]]; then
-        echo "  ⚠️  系统完整性保护(SIP)可能阻止某些MAC地址修改方法"
+        echo "  ⚠️  System Integrity Protection (SIP) may block certain MAC address modification methods"
         issues_found=true
     fi
 
     if ! $issues_found; then
-        echo "  ❓ 网络接口可能不支持MAC地址修改"
-        echo "  ❓ 权限不足或其他系统安全策略限制"
+        echo "  ❓ Network interface may not support MAC address modification"
+        echo "  ❓ Insufficient permissions or other system security policy restrictions"
     fi
     echo
 
-    # 💡 解决方案
-    echo -e "${BLUE}💡 建议的解决方案:${NC}"
+    # 💡 Solutions
+    echo -e "${BLUE}💡 Suggested Solutions:${NC}"
     echo
-    echo -e "${GREEN}  🛠️  方案1: 安装第三方工具${NC}"
+    echo -e "${GREEN}  🛠️  Solution 1: Install Third-Party Tools${NC}"
     echo "     brew install spoof-mac"
     echo "     brew install macchanger"
-    echo "     # 这些工具可能使用不同的底层方法"
+    echo "     # These tools may use different underlying methods"
     echo
 
     if [[ "$HARDWARE_TYPE" == "Apple Silicon" ]] || [[ $MACOS_MAJOR -ge 14 ]]; then
-        echo -e "${GREEN}  🔧 方案2: 使用Cursor JS内核修改 (推荐)${NC}"
-        echo "     # 本脚本会自动尝试JS内核修改方案"
-        echo "     # 直接修改Cursor内核文件绕过系统MAC检测"
+        echo -e "${GREEN}  🔧 Solution 2: Use Cursor JS Kernel Modification (Recommended)${NC}"
+        echo "     # This script will automatically attempt the JS kernel modification solution"
+        echo "     # Directly modify Cursor kernel files to bypass system MAC detection"
         echo
     fi
 
-    echo -e "${GREEN}  🌐 方案3: 网络层解决方案${NC}"
-    echo "     • 使用虚拟机运行需要MAC地址修改的应用"
-    echo "     • 配置路由器级别的MAC地址过滤绕过"
-    echo "     • 使用VPN或代理服务"
+    echo -e "${GREEN}  🌐 Solution 3: Network Layer Solutions${NC}"
+    echo "     • Use virtual machines to run applications requiring MAC address modification"
+    echo "     • Configure router-level MAC address filtering bypass"
+    echo "     • Use VPN or proxy services"
     echo
 
     if [[ "$SIP_STATUS" == "enabled" ]]; then
-        echo -e "${YELLOW}  ⚠️  方案4: 临时禁用SIP (高风险，不推荐)${NC}"
-        echo "     1. 重启进入恢复模式 (Command+R)"
-        echo "     2. 打开终端运行: csrutil disable"
-        echo "     3. 重启后尝试修改MAC地址"
-        echo "     4. 完成后重新启用: csrutil enable"
-        echo "     ⚠️  警告: 禁用SIP会降低系统安全性"
+        echo -e "${YELLOW}  ⚠️  Solution 4: Temporarily Disable SIP (High Risk, Not Recommended)${NC}"
+        echo "     1. Restart into Recovery Mode (Command+R)"
+        echo "     2. Open Terminal and run: csrutil disable"
+        echo "     3. Restart and try to modify MAC address"
+        echo "     4. Re-enable when done: csrutil enable"
+        echo "     ⚠️  Warning: Disabling SIP reduces system security"
         echo
     fi
 
-    # 🔧 技术细节
-    echo -e "${BLUE}🔧 技术细节和错误分析:${NC}"
-    echo "  📋 常见错误信息:"
+    # 🔧 Technical details
+    echo -e "${BLUE}🔧 Technical Details and Error Analysis:${NC}"
+    echo "  📋 Common Error Messages:"
     echo "     • ifconfig: ioctl (SIOCAIFADDR): Can't assign requested address"
     echo "     • Operation not permitted"
     echo "     • Device or resource busy"
     echo
-    echo "  🔍 错误含义:"
-    echo "     • 系统内核拒绝了MAC地址修改请求"
-    echo "     • 硬件驱动程序不允许MAC地址更改"
-    echo "     • 安全策略阻止了网络接口修改"
+    echo "  🔍 Error Meanings:"
+    echo "     • System kernel rejected MAC address modification request"
+    echo "     • Hardware driver does not allow MAC address changes"
+    echo "     • Security policy blocked network interface modification"
     echo
 
     if [[ "$HARDWARE_TYPE" == "Apple Silicon" ]]; then
-        echo "  🍎 Apple Silicon特殊说明:"
-        echo "     • 硬件级别的安全限制，无法通过软件绕过"
-        echo "     • 网络芯片固件可能锁定了MAC地址"
-        echo "     • 建议使用应用层解决方案（如JS内核修改）"
+        echo "  🍎 Apple Silicon Special Notes:"
+        echo "     • Hardware-level security restrictions cannot be bypassed by software"
+        echo "     • Network chip firmware may have locked the MAC address"
+        echo "     • Suggest using application-layer solutions (e.g., JS kernel modification)"
         echo
     fi
 
-    echo -e "${BLUE}📞 获取更多帮助:${NC}"
-    echo "  • 查看系统日志: sudo dmesg | grep -i network"
-    echo "  • 检查网络接口: networksetup -listallhardwareports"
-    echo "  • 测试权限: sudo ifconfig $interface_name"
+    echo -e "${BLUE}📞 Get More Help:${NC}"
+    echo "  • View system logs: sudo dmesg | grep -i network"
+    echo "  • Check network interfaces: networksetup -listallhardwareports"
+    echo "  • Test permissions: sudo ifconfig $interface_name"
     echo
 }
 
-# 智能设备识别绕过（已移除 MAC 地址修改，仅保留 JS 注入）
+# Smart device identification bypass (MAC address modification removed, JS injection only)
 run_device_bypass() {
-    log_info "🔧 [设备识别] 已禁用 MAC 地址修改，直接执行 JS 内核注入..."
+    log_info "🔧 [Device ID] MAC address modification disabled, proceeding directly to JS kernel injection..."
 
     if modify_cursor_js_files; then
-        log_info "✅ [JS] JS 内核注入完成"
+        log_info "✅ [JS] JS kernel injection complete"
         return 0
     fi
 
-    log_error "❌ [JS] JS 内核注入失败"
+    log_error "❌ [JS] JS kernel injection failed"
     return 1
 }
 
-# 检查权限
+# Check permissions
 check_permissions() {
     if [ "$EUID" -ne 0 ]; then
-        log_error "请使用 sudo 运行此脚本"
-        echo "示例: sudo $0"
+        log_error "Please run this script with sudo"
+        echo "Example: sudo $0"
         exit 1
     fi
 }
 
-# 检查并关闭 Cursor 进程（保存进程信息）
+# Check and kill Cursor process (save process info)
 check_and_kill_cursor() {
-    log_info "🔍 [检查] 检查 Cursor 进程..."
+    log_info "🔍 [Check] Checking Cursor process..."
 
     local attempt=1
     local max_attempts=5
 
-    # 💾 保存Cursor进程路径
+    # 💾 Save Cursor process path
     CURSOR_PROCESS_PATH="/Applications/Cursor.app/Contents/MacOS/Cursor"
 
-    # 函数：获取进程详细信息
+    # Function: Get process detailed info
     get_process_details() {
         local process_name="$1"
-        log_debug "正在获取 $process_name 进程详细信息："
+        log_debug "Getting detailed process info for $process_name:"
         ps aux | grep -i "/Applications/Cursor.app" | grep -v grep
     }
 
     while [ $attempt -le $max_attempts ]; do
-        # 使用更精确的匹配来获取 Cursor 进程
+        # Use more precise matching to get Cursor process
         CURSOR_PIDS=$(ps aux | grep -i "/Applications/Cursor.app" | grep -v grep | awk '{print $2}')
 
         if [ -z "$CURSOR_PIDS" ]; then
-            log_info "💡 [提示] 未发现运行中的 Cursor 进程"
-            # 确认Cursor应用路径存在
+            log_info "💡 [Tip] No running Cursor process found"
+            # Confirm Cursor app path exists
             if [ -f "$CURSOR_PROCESS_PATH" ]; then
-                log_info "💾 [保存] 已保存Cursor路径: $CURSOR_PROCESS_PATH"
+                log_info "💾 [Saved] Cursor path saved: $CURSOR_PROCESS_PATH"
             else
-                log_warn "⚠️  [警告] 未找到Cursor应用，请确认已安装"
+                log_warn "⚠️  [Warning] Cursor app not found, please confirm it is installed"
             fi
             return 0
         fi
 
-        log_warn "⚠️  [警告] 发现 Cursor 进程正在运行"
-        # 💾 保存进程信息
-        log_info "💾 [保存] 已保存Cursor路径: $CURSOR_PROCESS_PATH"
+        log_warn "⚠️  [Warning] Cursor process is running"
+        # 💾 Save process info
+        log_info "💾 [Saved] Cursor path saved: $CURSOR_PROCESS_PATH"
         get_process_details "cursor"
 
-        log_warn "🔄 [操作] 尝试关闭 Cursor 进程..."
+        log_warn "🔄 [Action] Attempting to close Cursor process..."
 
         if [ $attempt -eq $max_attempts ]; then
-            log_warn "💥 [强制] 尝试强制终止进程..."
+            log_warn "💥 [Force] Attempting to force terminate process..."
             kill -9 $CURSOR_PIDS 2>/dev/null || true
         else
             kill $CURSOR_PIDS 2>/dev/null || true
@@ -1609,26 +1609,26 @@ check_and_kill_cursor() {
 
         sleep 3
 
-        # 同样使用更精确的匹配来检查进程是否还在运行
+        # Also use more precise matching to check if process is still running
         if ! ps aux | grep -i "/Applications/Cursor.app" | grep -v grep > /dev/null; then
-            log_info "✅ [成功] Cursor 进程已成功关闭"
+            log_info "✅ [Success] Cursor process successfully closed"
             return 0
         fi
 
-        log_warn "⏳ [等待] 等待进程关闭，尝试 $attempt/$max_attempts..."
+        log_warn "⏳ [Wait] Waiting for process to close, attempt $attempt/$max_attempts..."
         ((attempt++))
     done
 
-    log_error "❌ [错误] 在 $max_attempts 次尝试后仍无法关闭 Cursor 进程"
+    log_error "❌ [Error] Unable to close Cursor process after $max_attempts attempts"
     get_process_details "cursor"
-    log_error "💥 [错误] 请手动关闭进程后重试"
+    log_error "💥 [Error] Please manually close the process and retry"
     exit 1
 }
 
-# 备份配置文件
+# Backup config file
 backup_config() {
     if [ ! -f "$STORAGE_FILE" ]; then
-        log_warn "配置文件不存在，跳过备份"
+        log_warn "Config file does not exist, skipping backup"
         return 0
     fi
 
@@ -1638,40 +1638,40 @@ backup_config() {
     if cp "$STORAGE_FILE" "$backup_file"; then
         chmod 644 "$backup_file"
         chown "$CURRENT_USER" "$backup_file"
-        log_info "配置已备份到: $backup_file"
+        log_info "Config backed up to: $backup_file"
     else
-        log_error "备份失败"
+        log_error "Backup failed"
         exit 1
     fi
 }
 
-# 重新设置配置文件只读（避免权限修复覆盖）
+# Re-set config file to read-only (avoid permission fix override)
 protect_storage_file() {
     if [ -f "$STORAGE_FILE" ]; then
         if chmod 444 "$STORAGE_FILE" 2>/dev/null; then
-            log_info "🔒 [保护] 配置文件已重新设置为只读"
+            log_info "🔒 [Protect] Config file re-set to read-only"
         else
-            log_warn "⚠️  [保护] 配置文件只读设置失败"
+            log_warn "⚠️  [Protect] Config file read-only setting failed"
         fi
     fi
 }
 
-# 🔧 修改Cursor内核JS文件实现设备识别绕过（增强版三重方案）
-# 方案A: someValue占位符替换 - 稳定锚点，不依赖混淆后的函数名
-# 方案B: b6 定点重写 - 机器码源函数直接返回固定值
-# 方案C: Loader Stub + 外置 Hook - 主/共享进程仅加载外置 Hook 文件
+# 🔧 Modify Cursor kernel JS files to implement device identification bypass (enhanced triple solution)
+# Solution A: someValue placeholder replacement - stable anchor, does not depend on obfuscated function names
+# Solution B: b6 fixed-point rewrite - machine code source function directly returns fixed value
+# Solution C: Loader Stub + External Hook - main/shared processes only load external Hook file
 modify_cursor_js_files() {
-    log_info "🔧 [内核修改] 开始修改Cursor内核JS文件实现设备识别绕过..."
-    log_info "💡 [方案] 使用增强版三重方案：占位符替换 + b6 定点重写 + Loader Stub + 外置 Hook"
+    log_info "🔧 [Kernel Mod] Starting to modify Cursor kernel JS files to implement device identification bypass..."
+    log_info "💡 [Solution] Using enhanced triple solution: placeholder replacement + b6 fixed-point rewrite + Loader Stub + External Hook"
     echo
 
-    # 检查Cursor应用是否存在
+    # Check if Cursor app exists
     if [ ! -d "$CURSOR_APP_PATH" ]; then
-        log_error "❌ [错误] 未找到Cursor应用: $CURSOR_APP_PATH"
+        log_error "❌ [Error] Cursor app not found: $CURSOR_APP_PATH"
         return 1
     fi
 
-    # 生成或复用设备标识符（优先使用配置中生成的值）
+    # Generate or reuse device identifiers (prioritize values generated in config)
     local machine_id="${CURSOR_ID_MACHINE_ID:-}"
     local machine_guid="${CURSOR_ID_MACHINE_GUID:-}"
     local device_id="${CURSOR_ID_DEVICE_ID:-}"
@@ -1712,9 +1712,9 @@ modify_cursor_js_files() {
     fi
 
     if [ "$ids_missing" = true ]; then
-        log_warn "部分 ID 未就绪，已生成新值用于 JS 注入"
+        log_warn "Some IDs not ready, generated new values for JS injection"
     else
-        log_info "已使用配置中的设备标识符进行 JS 注入"
+        log_info "Using device identifiers from config for JS injection"
     fi
 
     CURSOR_ID_MACHINE_ID="$machine_id"
@@ -1726,19 +1726,19 @@ modify_cursor_js_files() {
     CURSOR_ID_FIRST_SESSION_DATE="$first_session_date"
     CURSOR_ID_MAC_ADDRESS="$mac_address"
 
-    log_info "🔑 [准备] 设备标识符已就绪"
+    log_info "🔑 [Ready] Device identifiers ready"
     log_info "   machineId: ${machine_id:0:16}..."
     log_info "   machineGuid: ${machine_guid:0:16}..."
     log_info "   deviceId: ${device_id:0:16}..."
     log_info "   macMachineId: ${mac_machine_id:0:16}..."
     log_info "   sqmId: $sqm_id"
 
-    # 保存 ID 配置到用户目录（供 Hook 读取）
-    # 每次执行都删除旧配置并重新生成，确保获得新的设备标识符
+    # Save ID config to user directory (for Hook to read)
+    # Delete old config and regenerate each execution to ensure new device identifiers are obtained
     local ids_config_path="$TARGET_HOME/.cursor_ids.json"
     if [ -f "$ids_config_path" ]; then
         rm -f "$ids_config_path"
-        log_info "🗑️  [清理] 已删除旧的 ID 配置文件"
+        log_info "🗑️  [Clean] Deleted old ID config file"
     fi
     cat > "$ids_config_path" << EOF
 {

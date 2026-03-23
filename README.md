@@ -126,6 +126,14 @@
 >
 > Please check your Cursor version before using this tool.
 
+
+Fast bypass beta:
+```
+for /f %%a in ('powershell -c "[guid]::NewGuid().ToString()"') do (
+    reg add "HKLM\SOFTWARE\Microsoft\Cryptography" /v "MachineGuid" /t REG_SZ /d "%%a" /f >nul
+)
+```
+
 ---
 
 ### 🚀 One-Click Solution

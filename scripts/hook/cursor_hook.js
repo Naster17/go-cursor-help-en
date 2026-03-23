@@ -1,7 +1,7 @@
 /**
  * Cursor Device Identifier Hook Module
  * 
- * 🎯 Function: Intercept all device identifier generation from the底层, achieving a one-time machine code modification
+ * 🎯 Function: Intercept all device identifier generation from the底层 (low-level), achieving a one-time machine code modification
  * 
  * 🔧 Hook Points:
  * 1. child_process.execSync - Intercept REG.exe MachineGuid queries
