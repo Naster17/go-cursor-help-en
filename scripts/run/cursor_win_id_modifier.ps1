@@ -1201,7 +1201,8 @@ function Invoke-CursorInitialization {
                 Write-Host "$GREEN✅ [Success]$NC Deleted file: $file"
             }
             catch {
-                Write-Host "$RED❌ [Error]$NC Failed to delete file $file: $($_.Exception.Message)"
+                $errMsg = $_.Exception.Message
+                Write-Host "$RED❌ [Error]$NC Failed to delete file $file`: $errMsg"
             }
         } else {
             Write-Host "$YELLOW⚠️  [Skip]$NC File does not exist, skipping deletion: $file"
@@ -1216,7 +1217,8 @@ function Invoke-CursorInitialization {
             Write-Host "$GREEN✅ [Success]$NC Cleared folder contents: $folderToCleanContents"
         }
         catch {
-            Write-Host "$RED❌ [Error]$NC Failed to clear folder $folderToCleanContents: $($_.Exception.Message)"
+            $errMsg = $_.Exception.Message
+            Write-Host "$RED❌ [Error]$NC Failed to clear folder $folderToCleanContents`: $errMsg"
         }
     } else {
         Write-Host "$YELLOW⚠️  [Skip]$NC Folder does not exist, skipping clear: $folderToCleanContents"
@@ -1230,7 +1232,8 @@ function Invoke-CursorInitialization {
             Write-Host "$GREEN✅ [Success]$NC Deleted folder: $folderToDeleteCompletely"
         }
         catch {
-            Write-Host "$RED❌ [Error]$NC Failed to delete folder $folderToDeleteCompletely: $($_.Exception.Message)"
+            $errMsg = $_.Exception.Message
+            Write-Host "$RED❌ [Error]$NC Failed to delete folder $folderToDeleteCompletely`: $errMsg"
         }
     } else {
         Write-Host "$YELLOW⚠️  [Skip]$NC Folder does not exist, skipping deletion: $folderToDeleteCompletely"
