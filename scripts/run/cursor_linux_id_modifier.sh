@@ -1305,11 +1305,11 @@ EOF
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     local hook_source_path="$script_dir/../hook/cursor_hook.js"
     local hook_download_urls=(
-        "https://wget.la/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
-        "https://down.npee.cn/?https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
-        "https://xget.xi-xu.me/gh/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
-        "https://gh-proxy.com/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
-        "https://gh.chjina.com/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
+        "https://wget.la/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js"
+        "https://down.npee.cn/?https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js"
+        "https://xget.xi-xu.me/gh/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js"
+        "https://gh-proxy.com/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js"
+        "https://gh.chjina.com/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js"
     )
     # Support overriding download nodes via environment variable (comma-separated)
     if [ -n "$CURSOR_HOOK_DOWNLOAD_URLS" ]; then

@@ -482,11 +482,11 @@ function Modify-CursorJSFiles {
     }
     $hookSourcePath = $hookSourceCandidates | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
     $hookDownloadUrls = @(
-        "https://wget.la/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js",
-        "https://down.npee.cn/?https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js",
-        "https://xget.xi-xu.me/gh/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js",
-        "https://gh-proxy.com/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js",
-        "https://gh.chjina.com/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
+        "https://wget.la/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js",
+        "https://down.npee.cn/?https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js",
+        "https://xget.xi-xu.me/gh/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js",
+        "https://gh-proxy.com/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js",
+        "https://gh.chjina.com/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/hook/cursor_hook.js"
     )
     # Support overriding download nodes via environment variable (comma-separated)
     if ($env:CURSOR_HOOK_DOWNLOAD_URLS) {
