@@ -63,39 +63,6 @@ irm "https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/mas
 
 </details>
 
-<details open>
-<summary><b>China Users (Recommended)</b></summary>
-
-**macOS**
-
-```bash
-curl -fsSL https://wget.la/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/run/cursor_mac_id_modifier.sh -o ./cursor_mac_id_modifier.sh && sudo bash ./cursor_mac_id_modifier.sh && rm ./cursor_mac_id_modifier.sh
-```
-
-**Linux**
-
-```bash
-curl -fsSL https://wget.la/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/run/cursor_linux_id_modifier.sh | sudo bash
-```
-
-**Windows**
-
-```powershell
-irm https://wget.la/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/run/cursor_win_id_modifier.ps1 | iex
-```
-
-**Tip (Windows):** If the mirror caches old content, append `?$(Get-Date -Format yyyyMMddHHmmss)` to the URL:
-
-```powershell
-irm "https://wget.la/https://raw.githubusercontent.com/Naster17/go-cursor-help-en/refs/heads/master/scripts/run/cursor_win_id_modifier.ps1?$(Get-Date -Format yyyyMMddHHmmss)" | iex
-```
-
-</details>
-
-<div align="center">
-<img src="img/run_success.png" alt="Run Success" width="600"/>
-</div>
-
 ---
 
 ## 🖥️ Platform Guides
