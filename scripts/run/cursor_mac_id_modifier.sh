@@ -1,16 +1,16 @@
 #!/bin/bash
 
 # ========================================
-# Cursor macOS 机器码修改脚本
+# Cursor macOS Machine Code Modifier Script
 # ========================================
 #
-# 🔧 权限修复增强：
-# - 集成用户提供的核心权限修复命令
-# - 特别处理logs目录权限问题
-# - 解决EACCES: permission denied错误
-# - 确保Cursor能正常启动
+# 🔧 Permission Fix Enhancement:
+# - Integrates core permission fix commands provided by users
+# - Specifically handles logs directory permission issues
+# - Resolves EACCES: permission denied errors
+# - Ensures Cursor can start normally
 #
-# 🚨 如果遇到权限错误，脚本会自动执行：
+# 🚨 If permission errors occur, the script will automatically execute:
 # - sudo chown -R "$TARGET_USER" "$TARGET_HOME/Library/Application Support/Cursor"
 # - sudo chown -R "$TARGET_USER" "$TARGET_HOME/.cursor"
 # - chmod -R u+rwX "$TARGET_HOME/Library/Application Support/Cursor"
@@ -18,31 +18,31 @@
 #
 # ========================================
 
-# 设置错误处理
+# Set error handling
 set -e
 
-# 定义日志文件路径
+# Define log file path
 LOG_FILE="/tmp/cursor_free_trial_reset.log"
 
-# 初始化日志文件
+# Initialize log file
 initialize_log() {
     echo "========== Cursor Free Trial Reset Tool Log Start $(date) ==========" > "$LOG_FILE"
     chmod 644 "$LOG_FILE"
 }
 
-# 颜色定义
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 启动时尝试调整终端窗口大小为 120x40（列x行）；不支持/失败时静默忽略，避免影响脚本主流程
+# Try to resize terminal window to 120x40 (cols x rows) on startup; silently ignore if not supported/failed to avoid affecting main script flow
 try_resize_terminal_window() {
     local target_cols=120
     local target_rows=40
 
-    # 仅在交互终端中尝试，避免输出被重定向时出现乱码
+    # Only try in interactive terminal to avoid garbled output when redirected
     if [ ! -t 1 ]; then
         return 0
     fi
@@ -53,7 +53,7 @@ try_resize_terminal_window() {
             ;;
     esac
 
-    # 终端类型检测：仅对常见 xterm 体系终端尝试窗口调整（Terminal.app/iTerm2 以及常见终端通常为 xterm*）
+    # Terminal type detection: only attempt window resize for common xterm-based terminals (Terminal.app/iTerm2 and common terminals are usually xterm*)
     case "${TERM:-}" in
         xterm*|screen*|tmux*|rxvt*|alacritty*|kitty*|foot*|wezterm*)
             ;;
@@ -62,7 +62,7 @@ try_resize_terminal_window() {
             ;;
     esac
 
-    # 优先通过 xterm 窗口控制序列调整；在 tmux/screen 下需要 passthrough 包装
+    # Prefer xterm window control sequences; need passthrough wrapper under tmux/screen
     if [ -n "${TMUX:-}" ]; then
         printf '\033Ptmux;\033\033[8;%d;%dt\033\\' "$target_rows" "$target_cols" 2>/dev/null || true
     elif [ -n "${STY:-}" ]; then
@@ -74,7 +74,7 @@ try_resize_terminal_window() {
     return 0
 }
 
-# 日志函数 - 同时输出到终端和日志文件
+# Log functions - output to both terminal and log file
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
     echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
@@ -95,51 +95,51 @@ log_debug() {
     echo "[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
 }
 
-# 记录命令输出到日志文件
+# Log command output to log file
 log_cmd_output() {
     local cmd="$1"
     local msg="$2"
-    echo "[CMD] $(date '+%Y-%m-%d %H:%M:%S') 执行命令: $cmd" >> "$LOG_FILE"
+    echo "[CMD] $(date '+%Y-%m-%d %H:%M:%S') Executing command: $cmd" >> "$LOG_FILE"
     echo "[CMD] $msg:" >> "$LOG_FILE"
     eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
     echo "" >> "$LOG_FILE"
 }
 
-# 生成指定字节长度的十六进制串（2*bytes 个字符），优先 openssl，缺失时使用 python3 兜底
+# Generate hex string of specified byte length (2*bytes characters), prefer openssl, fallback to python3 if missing
 generate_hex_bytes() {
     local bytes="$1"
     if command -v openssl >/dev/null 2>&1; then
         openssl rand -hex "$bytes"
         return 0
     fi
-    # mac 脚本已要求 python3，可作为兜底
+    # mac script requires python3, can be used as fallback
     python3 -c 'import os, sys; print(os.urandom(int(sys.argv[1])).hex())' "$bytes"
 }
 
-# 生成随机 UUID（小写），优先 uuidgen，缺失时使用 python3 兜底
+# Generate random UUID (lowercase), prefer uuidgen, fallback to python3 if missing
 generate_uuid() {
     if command -v uuidgen >/dev/null 2>&1; then
         uuidgen | tr '[:upper:]' '[:lower:]'
         return 0
     fi
-    # mac 脚本已要求 python3，可作为兜底
+    # mac script requires python3, can be used as fallback
     python3 -c 'import uuid; print(str(uuid.uuid4()))'
 }
 
-# 🚀 新增 Cursor 防掉试用Pro删除文件夹功能
+# 🚀 New: Cursor trial reset Pro folder deletion feature
 remove_cursor_trial_folders() {
     echo
-    log_info "🎯 [核心功能] 正在执行 Cursor 防掉试用Pro删除文件夹..."
-    log_info "📋 [说明] 此功能将删除指定的Cursor相关文件夹以重置试用状态"
+    log_info "🎯 [Core Feature] Executing Cursor trial reset Pro folder deletion..."
+    log_info "📋 [Note] This feature will delete specified Cursor-related folders to reset trial status"
     echo
 
-    # 定义需要删除的文件夹路径
+    # Define folders to delete
     local folders_to_delete=(
         "$TARGET_HOME/Library/Application Support/Cursor"
         "$TARGET_HOME/.cursor"
     )
 
-    log_info "📂 [检测] 将检查以下文件夹："
+    log_info "📂 [Check] Will check the following folders:"
     for folder in "${folders_to_delete[@]}"; do
         echo "   📁 $folder"
     done
@@ -149,171 +149,171 @@ remove_cursor_trial_folders() {
     local skipped_count=0
     local error_count=0
 
-    # 删除指定文件夹
+    # Delete specified folders
     for folder in "${folders_to_delete[@]}"; do
-        log_debug "🔍 [检查] 检查文件夹: $folder"
+        log_debug "🔍 [Check] Checking folder: $folder"
 
         if [ -d "$folder" ]; then
-            log_warn "⚠️  [警告] 发现文件夹存在，正在删除..."
+            log_warn "⚠️  [Warning] Folder exists, deleting..."
             if rm -rf "$folder"; then
-                log_info "✅ [成功] 已删除文件夹: $folder"
+                log_info "✅ [Success] Deleted folder: $folder"
                 ((deleted_count++))
             else
-                log_error "❌ [错误] 删除文件夹失败: $folder"
+                log_error "❌ [Error] Failed to delete folder: $folder"
                 ((error_count++))
             fi
         else
-            log_warn "⏭️  [跳过] 文件夹不存在: $folder"
+            log_warn "⏭️  [Skip] Folder does not exist: $folder"
             ((skipped_count++))
         fi
         echo
     done
 
-    # 🔧 重要：删除文件夹后立即执行权限修复
-    log_info "🔧 [权限修复] 删除文件夹后立即执行权限修复..."
+    # 🔧 Important: Execute permission fix immediately after deleting folders
+    log_info "🔧 [Permission Fix] Executing permission fix immediately after folder deletion..."
     echo
 
-    # 调用统一的权限修复函数
+    # Call unified permission fix function
     ensure_cursor_directory_permissions
 
-    # 显示操作统计
-    log_info "📊 [统计] 操作完成统计："
-    echo "   ✅ 成功删除: $deleted_count 个文件夹"
-    echo "   ⏭️  跳过处理: $skipped_count 个文件夹"
-    echo "   ❌ 删除失败: $error_count 个文件夹"
+    # Display operation statistics
+    log_info "📊 [Statistics] Operation completion statistics:"
+    echo "   ✅ Successfully deleted: $deleted_count folders"
+    echo "   ⏭️  Skipped: $skipped_count folders"
+    echo "   ❌ Failed to delete: $error_count folders"
     echo
 
     if [ $deleted_count -gt 0 ]; then
-        log_info "🎉 [完成] Cursor 防掉试用Pro文件夹删除完成！"
+        log_info "🎉 [Complete] Cursor trial reset Pro folder deletion complete!"
     else
-        log_warn "🤔 [提示] 未找到需要删除的文件夹，可能已经清理过了"
+        log_warn "🤔 [Note] No folders found to delete, may have already been cleaned"
     fi
     echo
 }
 
-# 🔄 重启Cursor并等待配置文件生成
+# 🔄 Restart Cursor and wait for configuration file generation
 restart_cursor_and_wait() {
     echo
-    log_info "🔄 [重启] 正在重启Cursor以重新生成配置文件..."
+    log_info "🔄 [Restart] Restarting Cursor to regenerate configuration file..."
 
     if [ -z "$CURSOR_PROCESS_PATH" ]; then
-        log_error "❌ [错误] 未找到Cursor进程信息，无法重启"
+        log_error "❌ [Error] Cursor process info not found, cannot restart"
         return 1
     fi
 
-    log_info "📍 [路径] 使用路径: $CURSOR_PROCESS_PATH"
+    log_info "📍 [Path] Using path: $CURSOR_PROCESS_PATH"
 
     if [ ! -f "$CURSOR_PROCESS_PATH" ]; then
-        log_error "❌ [错误] Cursor可执行文件不存在: $CURSOR_PROCESS_PATH"
+        log_error "❌ [Error] Cursor executable does not exist: $CURSOR_PROCESS_PATH"
         return 1
     fi
 
-    # 🔧 启动前权限修复
-    log_info "🔧 [启动前权限] 执行启动前权限修复..."
+    # 🔧 Permission fix before startup
+    log_info "🔧 [Pre-startup Permission] Executing permission fix before startup..."
     ensure_cursor_directory_permissions
 
-    # 启动Cursor
-    log_info "🚀 [启动] 正在启动Cursor..."
+    # Start Cursor
+    log_info "🚀 [Startup] Starting Cursor..."
     "$CURSOR_PROCESS_PATH" > /dev/null 2>&1 &
     CURSOR_PID=$!
 
-    log_info "⏳ [等待] 等待15秒让Cursor完全启动并生成配置文件..."
+    log_info "⏳ [Wait] Waiting 15 seconds for Cursor to fully start and generate configuration file..."
     sleep 15
 
-    # 检查配置文件是否生成
+    # Check if configuration file is generated
     local config_path="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/storage.json"
     local max_wait=30
     local waited=0
 
     while [ ! -f "$config_path" ] && [ $waited -lt $max_wait ]; do
-        log_info "⏳ [等待] 等待配置文件生成... ($waited/$max_wait 秒)"
+        log_info "⏳ [Wait] Waiting for configuration file generation... ($waited/$max_wait seconds)"
         sleep 1
         waited=$((waited + 1))
     done
 
     if [ -f "$config_path" ]; then
-        log_info "✅ [成功] 配置文件已生成: $config_path"
+        log_info "✅ [Success] Configuration file generated: $config_path"
 
-        # 🛡️ 关键修复：配置文件生成后立即确保权限正确
+        # 🛡️ Critical fix: Ensure permissions are correct immediately after configuration file generation
         ensure_cursor_directory_permissions
     else
-        log_warn "⚠️  [警告] 配置文件未在预期时间内生成，继续执行..."
+        log_warn "⚠️  [Warning] Configuration file not generated within expected time, continuing..."
 
-        # 即使配置文件未生成，也要确保目录权限正确
+        # Even if configuration file is not generated, ensure directory permissions are correct
         ensure_cursor_directory_permissions
     fi
 
-    # 强制关闭Cursor
-    log_info "🔄 [关闭] 正在关闭Cursor以进行配置修改..."
+    # Force close Cursor
+    log_info "🔄 [Close] Closing Cursor for configuration modification..."
     if [ -n "${CURSOR_PID:-}" ]; then
         kill "$CURSOR_PID" 2>/dev/null || true
-        # 🔧 回收后台进程，避免某些环境输出 “Terminated: 15 ...” 的噪音
+        # 🔧 Reap background process to avoid "Terminated: 15 ..." noise in some environments
         wait "$CURSOR_PID" 2>/dev/null || true
     fi
 
-    # 确保所有Cursor进程都关闭
+    # Ensure all Cursor processes are closed
     pkill -f "Cursor" 2>/dev/null || true
 
-    log_info "✅ [完成] Cursor重启流程完成"
+    log_info "✅ [Complete] Cursor restart process complete"
     return 0
 }
 
-# 🔍 检查Cursor环境
+# 🔍 Check Cursor environment
 test_cursor_environment() {
     local mode=${1:-"FULL"}
 
     echo
-    log_info "🔍 [环境检查] 正在检查Cursor环境..."
+    log_info "🔍 [Environment Check] Checking Cursor environment..."
 
     local config_path="$TARGET_HOME/Library/Application Support/Cursor/User/globalStorage/storage.json"
     local cursor_app_data="$TARGET_HOME/Library/Application Support/Cursor"
     local cursor_app_path="/Applications/Cursor.app"
     local issues=()
 
-    # 检查Python3环境（macOS版本需要）
+    # Check Python3 environment (required for macOS version)
     if ! command -v python3 >/dev/null 2>&1; then
-        issues+=("Python3环境不可用，macOS版本需要Python3来处理JSON配置文件")
-        log_warn "⚠️  [警告] 未找到Python3，请安装Python3: brew install python3"
+        issues+=("Python3 environment unavailable, macOS version requires Python3 to process JSON configuration files")
+        log_warn "⚠️  [Warning] Python3 not found, please install Python3: brew install python3"
     else
-        log_info "✅ [检查] Python3环境可用: $(python3 --version)"
+        log_info "✅ [Check] Python3 environment available: $(python3 --version)"
     fi
 
-    # 检查配置文件
+    # Check configuration file
     if [ ! -f "$config_path" ]; then
-        issues+=("配置文件不存在: $config_path")
+        issues+=("Configuration file does not exist: $config_path")
     else
-        # 验证JSON格式
-        # 🔧 修复：避免把路径直接拼进 Python 源码字符串（路径包含引号等特殊字符时会导致语法错误）
+        # Verify JSON format
+        # 🔧 Fix: Avoid directly embedding paths into Python source strings (paths containing quotes and special characters can cause syntax errors)
         if python3 -c 'import json, sys; json.load(open(sys.argv[1], "r", encoding="utf-8"))' "$config_path" 2>/dev/null; then
-            log_info "✅ [检查] 配置文件格式正确"
+            log_info "✅ [Check] Configuration file format correct"
         else
-            issues+=("配置文件格式错误或损坏")
+            issues+=("Configuration file format error or corrupted")
         fi
     fi
 
-    # 检查Cursor目录结构
+    # Check Cursor directory structure
     if [ ! -d "$cursor_app_data" ]; then
-        issues+=("Cursor应用数据目录不存在: $cursor_app_data")
+        issues+=("Cursor application data directory does not exist: $cursor_app_data")
     fi
 
-    # 检查Cursor应用安装
+    # Check Cursor application installation
     if [ ! -d "$cursor_app_path" ]; then
-        issues+=("未找到Cursor应用安装: $cursor_app_path")
+        issues+=("Cursor application installation not found: $cursor_app_path")
     else
-        log_info "✅ [检查] 找到Cursor应用: $cursor_app_path"
+        log_info "✅ [Check] Found Cursor application: $cursor_app_path"
     fi
 
-    # 检查目录权限
+    # Check directory permissions
     if [ -d "$cursor_app_data" ] && [ ! -w "$cursor_app_data" ]; then
-        issues+=("Cursor应用数据目录无写入权限: $cursor_app_data")
+        issues+=("Cursor application data directory has no write permission: $cursor_app_data")
     fi
 
-    # 返回检查结果
+    # Return check results
     if [ ${#issues[@]} -eq 0 ]; then
-        log_info "✅ [环境检查] 所有检查通过"
+        log_info "✅ [Environment Check] All checks passed"
         return 0
     else
-        log_error "❌ [环境检查] 发现 ${#issues[@]} 个问题："
+        log_error "❌ [Environment Check] Found ${#issues[@]} issues:"
         for issue in "${issues[@]}"; do
             echo -e "${RED}  • $issue${NC}"
         done

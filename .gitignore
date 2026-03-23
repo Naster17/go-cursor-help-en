@@ -1,7 +1,3 @@
-# Compiled binary
-/cursor-id-modifier
-/cursor-id-modifier.exe
-
 # Build output directories
 bin/
 dist/
@@ -43,7 +39,7 @@ coverage.txt
 
 .cunzhi*/
 .sanshu*/
-docs/
+
 
 # Qoder IDE
 .qoder/

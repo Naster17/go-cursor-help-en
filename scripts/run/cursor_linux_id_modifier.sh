@@ -1,30 +1,30 @@
 #!/bin/bash
 
-# 设置错误处理
+# Set error handling
 set -e
 
-# 定义日志文件路径
+# Define log file path
 LOG_FILE="/tmp/cursor_linux_id_modifier.log"
 
-# 初始化日志文件
+# Initialize log file
 initialize_log() {
-    echo "========== Cursor ID 修改工具日志开始 $(date) ==========" > "$LOG_FILE"
+    echo "========== Cursor ID Modifier Tool Log Start $(date) ==========" > "$LOG_FILE"
     chmod 644 "$LOG_FILE"
 }
 
-# 颜色定义
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 显式禁用时，关闭 TTY UI（resize/clear/Logo），避免部分环境乱码/花屏
+# When explicitly disabled, turn off TTY UI (resize/clear/Logo) to avoid garbled output in some environments
 if [ -n "${CURSOR_NO_TTY_UI:-}" ]; then
     CURSOR_NO_TTY_UI=1
 fi
 
-# UI/颜色开关：遵循 NO_COLOR 标准，并支持 CURSOR_NO_TTY_UI（禁用花哨 TTY UI）
+# UI/Color switch: follows NO_COLOR standard, supports CURSOR_NO_TTY_UI (disables fancy TTY UI)
 if [ -n "${NO_COLOR:-}" ] || [ -n "${CURSOR_NO_COLOR:-}" ] || [ -n "${CURSOR_NO_TTY_UI:-}" ]; then
     RED=''
     GREEN=''
@@ -33,17 +33,17 @@ if [ -n "${NO_COLOR:-}" ] || [ -n "${CURSOR_NO_COLOR:-}" ] || [ -n "${CURSOR_NO_
     NC=''
 fi
 
-# 启动时尝试调整终端窗口大小为 120x40（列x行）；不支持/失败时静默忽略，避免影响脚本主流程
+# Try to resize terminal window to 120x40 (cols x rows) on startup; silently ignore if not supported/failed to avoid affecting main script flow
 try_resize_terminal_window() {
     local target_cols=120
     local target_rows=40
 
-    # 可通过 CURSOR_NO_TTY_UI 显式禁用所有终端控制输出（避免部分环境乱码/花屏）
+    # Can be explicitly disabled via CURSOR_NO_TTY_UI to avoid garbled output in some environments
     if [ -n "${CURSOR_NO_TTY_UI:-}" ]; then
         return 0
     fi
 
-    # 仅在交互终端中尝试，避免输出被重定向时出现乱码
+    # Only try in interactive terminal to avoid garbled output when redirected
     if [ ! -t 1 ]; then
         return 0
     fi
@@ -54,7 +54,7 @@ try_resize_terminal_window() {
             ;;
     esac
 
-    # 终端类型检测：仅对常见 xterm 体系终端尝试窗口调整（GNOME Terminal/Konsole/xterm/Terminator 等通常为 xterm*）
+    # Terminal type detection: only attempt window resize for common xterm-based terminals (GNOME Terminal/Konsole/xterm/Terminator etc. are usually xterm*)
     case "${TERM:-}" in
         xterm*|screen*|tmux*|rxvt*|alacritty*|kitty*|foot*|wezterm*)
             ;;
@@ -63,7 +63,7 @@ try_resize_terminal_window() {
             ;;
     esac
 
-    # 优先通过 xterm 窗口控制序列调整；在 tmux/screen 下需要 passthrough 包装
+    # Prefer xterm window control sequences; need passthrough wrapper under tmux/screen
     if [ -n "${TMUX:-}" ]; then
         printf '\033Ptmux;\033\033[8;%d;%dt\033\\' "$target_rows" "$target_cols" 2>/dev/null || true
     elif [ -n "${STY:-}" ]; then
@@ -75,7 +75,7 @@ try_resize_terminal_window() {
     return 0
 }
 
-# 日志函数 - 同时输出到终端和日志文件
+# Log functions - output to both terminal and log file
 log_info() {
     echo -e "${GREEN}[INFO]${NC} $1"
     echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
@@ -96,32 +96,32 @@ log_debug() {
     echo "[DEBUG] $(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
 }
 
-# 记录命令输出到日志文件
+# Log command output to log file
 log_cmd_output() {
     local cmd="$1"
     local msg="$2"
-    echo "[CMD] $(date '+%Y-%m-%d %H:%M:%S') 执行命令: $cmd" >> "$LOG_FILE"
+    echo "[CMD] $(date '+%Y-%m-%d %H:%M:%S') Executing command: $cmd" >> "$LOG_FILE"
     echo "[CMD] $msg:" >> "$LOG_FILE"
     eval "$cmd" 2>&1 | tee -a "$LOG_FILE"
     echo "" >> "$LOG_FILE"
 }
 
-# sed -i 兼容封装：优先原地编辑；不支持/失败时回退到临时文件替换，提升跨发行版兼容性
+# sed -i compatibility wrapper: prefer in-place edit; fall back to temp file replacement if not supported/failed, improving cross-distro compatibility
 sed_inplace() {
     local expr="$1"
     local file="$2"
 
-    # GNU sed / BusyBox sed：通常支持 sed -i
+    # GNU sed / BusyBox sed: usually supports sed -i
     if sed -i "$expr" "$file" 2>/dev/null; then
         return 0
     fi
 
-    # BSD sed：需要提供 -i '' 形式（少数环境可能出现）
+    # BSD sed: requires -i '' form (rare environments)
     if sed -i '' "$expr" "$file" 2>/dev/null; then
         return 0
     fi
 
-    # 最后兜底：临时文件替换（避免不同 sed 的 -i 语义差异）
+    # Final fallback: temp file replacement (avoids different sed -i semantics)
     local temp_file
     temp_file=$(mktemp) || return 1
     if sed "$expr" "$file" > "$temp_file"; then
@@ -133,7 +133,7 @@ sed_inplace() {
     return 1
 }
 
-# 路径解析兼容：优先 realpath；缺失时回退到 readlink -f / python3 / cd+pwd（避免命令缺失触发 set -e）
+# Path resolution compatibility: prefer realpath; fall back to readlink -f / python3 / cd+pwd (avoid triggering set -e on missing commands)
 resolve_path() {
     local target="$1"
 
@@ -149,7 +149,7 @@ resolve_path() {
         python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$target" 2>/dev/null && return 0
     fi
 
-    # 最后兜底：不解析符号链接，仅尽量返回绝对路径
+    # Final fallback: don't resolve symlinks, just return absolute path as best effort
     if [ -d "$target" ]; then
         (cd "$target" 2>/dev/null && pwd -P) && return 0
     fi
@@ -161,22 +161,22 @@ resolve_path() {
     return 0
 }
 
-# 获取当前用户
+# Get current user
 get_current_user() {
-    # sudo 场景：优先以 SUDO_USER 作为目标用户（Cursor 通常运行在该用户下）
+    # sudo scenario: prefer SUDO_USER as target user (Cursor usually runs under this user)
     if [ "$EUID" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
         echo "$SUDO_USER"
         return 0
     fi
 
-    # 普通/直跑 root 场景：使用当前有效用户
+    # Normal/direct root scenario: use current effective user
     if command -v id >/dev/null 2>&1; then
         id -un 2>/dev/null && return 0
     fi
     echo "${USER:-}"
 }
 
-# 获取指定用户的 Home 目录（兼容 sudo/root/容器等场景）
+# Get specified user's Home directory (compatible with sudo/root/container scenarios)
 get_user_home_dir() {
     local user="$1"
     local home=""
@@ -191,7 +191,7 @@ get_user_home_dir() {
         home=$(eval echo "~$user" 2>/dev/null)
     fi
 
-    # 兜底：无法解析时使用当前环境 HOME
+    # Fallback: use current environment HOME if unable to resolve
     if [ -z "$home" ] || [[ "$home" == "~"* ]]; then
         home="${HOME:-}"
     fi
@@ -199,13 +199,13 @@ get_user_home_dir() {
     echo "$home"
 }
 
-# 获取指定用户的主组（chown 需要 user:group；不同发行版 id 参数/输出可能存在差异）
+# Get specified user's primary group (chown needs user:group; different distros may have different id parameter/output)
 get_user_primary_group() {
     local user="$1"
     local group=""
     local gid=""
 
-    # 优先：直接获取主组名（最简洁）
+    # Priority: get primary group name directly (cleanest)
     if command -v id >/dev/null 2>&1; then
         group=$(id -gn "$user" 2>/dev/null | tr -d '\r\n') || true
         if [ -n "$group" ]; then
@@ -213,7 +213,7 @@ get_user_primary_group() {
             return 0
         fi
 
-        # 回退：先取 gid，再映射为组名（映射失败则直接返回 gid，chown 同样可用）
+        # Fallback: get gid first, then map to group name (if mapping fails return gid, which chown can also use)
         gid=$(id -g "$user" 2>/dev/null | tr -d '\r\n') || true
     fi
 
@@ -234,41 +234,41 @@ get_user_primary_group() {
         return 0
     fi
 
-    # 最后兜底：返回用户本身（少数系统允许 user:user）
+    # Final fallback: return user itself (some systems allow user:user)
     echo "$user"
     return 0
 }
 
 CURRENT_USER=$(get_current_user)
 if [ -z "$CURRENT_USER" ]; then
-    log_error "无法获取用户名"
+    log_error "Unable to get username"
     exit 1
 fi
 
-# 🎯 统一“目标用户/目标 Home”：后续所有 Cursor 用户数据路径均基于该 Home
+# 🎯 Unified "target user/target Home": all subsequent Cursor user data paths are based on this Home
 TARGET_HOME=$(get_user_home_dir "$CURRENT_USER")
 if [ -z "$TARGET_HOME" ]; then
-    log_error "无法解析目标用户 Home 目录: $CURRENT_USER"
+    log_error "Unable to resolve target user Home directory: $CURRENT_USER"
     exit 1
 fi
-log_info "目标用户: $CURRENT_USER"
-log_info "目标用户 Home: $TARGET_HOME"
+log_info "Target user: $CURRENT_USER"
+log_info "Target user Home: $TARGET_HOME"
 
-# 🎯 统一“目标用户主组”：chown 时不再依赖 id -g -n 的兼容性
+# 🎯 Unified "target user primary group": no longer relies on id -g -n compatibility for chown
 CURRENT_GROUP=$(get_user_primary_group "$CURRENT_USER")
 if [ -z "$CURRENT_GROUP" ]; then
     CURRENT_GROUP="$CURRENT_USER"
-    log_warn "无法解析目标用户主组，已回退为: $CURRENT_GROUP（后续 chown 可能失败）"
+    log_warn "Unable to resolve target user primary group, fallback to: $CURRENT_GROUP (subsequent chown may fail)"
 else
-    log_info "目标用户主组: $CURRENT_GROUP"
+    log_info "Target user primary group: $CURRENT_GROUP"
 fi
 
-# 定义Linux下的Cursor路径
+# Define Cursor paths on Linux
 CURSOR_CONFIG_DIR="$TARGET_HOME/.config/Cursor"
 STORAGE_FILE="$CURSOR_CONFIG_DIR/User/globalStorage/storage.json"
 BACKUP_DIR="$CURSOR_CONFIG_DIR/User/globalStorage/backups"
 
-# 共享ID（用于配置与JS注入保持一致）
+# Shared IDs (for consistency between config and JS injection)
 CURSOR_ID_MACHINE_ID=""
 CURSOR_ID_MACHINE_GUID=""
 CURSOR_ID_MAC_MACHINE_ID=""
@@ -278,144 +278,144 @@ CURSOR_ID_FIRST_SESSION_DATE=""
 CURSOR_ID_SESSION_ID=""
 CURSOR_ID_MAC_ADDRESS="00:11:22:33:44:55"
 
-# --- 新增：安装相关变量 ---
-APPIMAGE_SEARCH_DIR="/opt/CursorInstall" # AppImage 搜索目录，可按需修改
-APPIMAGE_PATTERN="Cursor-*.AppImage"     # AppImage 文件名模式
-INSTALL_DIR="/opt/Cursor"                # Cursor 最终安装目录
+# --- New: Installation related variables ---
+APPIMAGE_SEARCH_DIR="/opt/CursorInstall" # AppImage search directory, can be modified as needed
+APPIMAGE_PATTERN="Cursor-*.AppImage"     # AppImage filename pattern
+INSTALL_DIR="/opt/Cursor"                # Cursor final installation directory
 ICON_PATH="/usr/share/icons/cursor.png"
 DESKTOP_FILE="/usr/share/applications/cursor-cursor.desktop"
-# --- 结束：安装相关变量 ---
+# --- End: Installation related variables ---
 
-# 可能的Cursor二进制路径 - 添加了标准安装路径
+# Possible Cursor binary paths - added standard installation path
 CURSOR_BIN_PATHS=(
     "/usr/bin/cursor"
     "/usr/local/bin/cursor"
-    "$INSTALL_DIR/cursor"               # 添加标准安装路径
+    "$INSTALL_DIR/cursor"               # Added standard installation path
     "$TARGET_HOME/.local/bin/cursor"
     "/snap/bin/cursor"
 )
 
-# 找到Cursor安装路径
+# Find Cursor installation path
 find_cursor_path() {
-    log_info "查找Cursor安装路径..."
+    log_info "Searching for Cursor installation path..."
     
     for path in "${CURSOR_BIN_PATHS[@]}"; do
-        if [ -f "$path" ] && [ -x "$path" ]; then # 确保文件存在且可执行
-            log_info "找到Cursor安装路径: $path"
+        if [ -f "$path" ] && [ -x "$path" ]; then # Ensure file exists and is executable
+            log_info "Found Cursor installation path: $path"
             CURSOR_PATH="$path"
             return 0
         fi
     done
 
-    # 尝试通过which命令定位
+    # Try to locate via command -v
     if command -v cursor &> /dev/null; then
-        # 兼容修复：部分发行版没有 which；command -v 已可直接返回路径
+        # Compatibility fix: some distros don't have which; command -v can directly return path
         CURSOR_PATH=$(command -v cursor)
-        log_info "通过 command -v 找到 Cursor: $CURSOR_PATH"
+        log_info "Found Cursor via command -v: $CURSOR_PATH"
         return 0
     fi
     
-    # 尝试查找可能的安装路径 (限制搜索范围和类型)
-    # 兼容修复：find 的 -executable 在 BusyBox 等环境可能不可用，且 find 报错返回非0会触发 set -e；这里统一兜底处理
+    # Try to find possible installation paths (limit search scope and type)
+    # Compatibility fix: find's -executable may not be available in BusyBox, and find errors returning non-zero will trigger set -e; unified fallback handling here
     local cursor_paths=""
 
-    # 优先：使用 -executable（若受支持）
+    # Priority: use -executable (if supported)
     cursor_paths=$(find /usr /opt "$TARGET_HOME/.local" -type f -name "cursor" -executable 2>/dev/null || true)
 
-    # 回退：不依赖 -executable，改用 shell 过滤可执行
+    # Fallback: don't rely on -executable, use shell filtering for executables
     if [ -z "$cursor_paths" ]; then
         cursor_paths=$(find /usr /opt "$TARGET_HOME/.local" -type f -name "cursor" 2>/dev/null || true)
         cursor_paths=$(echo "$cursor_paths" | while IFS= read -r p; do [ -n "$p" ] && [ -x "$p" ] && echo "$p"; done)
     fi
 
-    # 额外兜底：标准安装路径优先
+    # Extra fallback: prioritize standard installation path
     if [ -x "$INSTALL_DIR/cursor" ]; then
         cursor_paths="$INSTALL_DIR/cursor"$'\n'"$cursor_paths"
     fi
     if [ -n "$cursor_paths" ]; then
-        # 优先选择标准安装路径
+        # Prioritize standard installation path
         local standard_path=$(echo "$cursor_paths" | grep "$INSTALL_DIR/cursor" | head -1)
         if [ -n "$standard_path" ]; then
             CURSOR_PATH="$standard_path"
         else
             CURSOR_PATH=$(echo "$cursor_paths" | head -1)
         fi
-        log_info "通过查找找到Cursor: $CURSOR_PATH"
+        log_info "Found Cursor via search: $CURSOR_PATH"
         return 0
     fi
     
-    log_warn "未找到Cursor可执行文件"
+    log_warn "Cursor executable not found"
     return 1
 }
 
-# 查找并定位Cursor资源文件目录
+# Find and locate Cursor resources directory
 find_cursor_resources() {
-    log_info "查找Cursor资源目录..."
+    log_info "Searching for Cursor resources directory..."
     
-    # 可能的资源目录路径 - 添加了标准安装目录
+    # Possible resource directory paths - added standard installation directory
     local resource_paths=(
-        "$INSTALL_DIR" # 添加标准安装路径
+        "$INSTALL_DIR" # Added standard installation path
         "/usr/lib/cursor"
         "/usr/share/cursor"
         "$TARGET_HOME/.local/share/cursor"
     )
     
     for path in "${resource_paths[@]}"; do
-        if [ -d "$path/resources" ]; then # 检查是否存在 resources 子目录
-            log_info "找到Cursor资源目录: $path"
+        if [ -d "$path/resources" ]; then # Check if resources subdirectory exists
+            log_info "Found Cursor resources directory: $path"
             CURSOR_RESOURCES="$path"
             return 0
         fi
-         if [ -d "$path/app" ]; then # 有些版本可能直接是 app 目录
-             log_info "找到Cursor资源目录 (app): $path"
+         if [ -d "$path/app" ]; then # Some versions may have app directory directly
+             log_info "Found Cursor resources directory (app): $path"
              CURSOR_RESOURCES="$path"
              return 0
          fi
     done
     
-    # 如果有CURSOR_PATH，尝试从它推断
+    # If CURSOR_PATH exists, try to infer from it
     if [ -n "$CURSOR_PATH" ]; then
         local base_dir=$(dirname "$CURSOR_PATH")
-        # 检查常见的相对路径
+        # Check common relative paths
         if [ -d "$base_dir/resources" ]; then
             CURSOR_RESOURCES="$base_dir"
-            log_info "通过二进制路径找到资源目录: $CURSOR_RESOURCES"
+            log_info "Found resources directory via binary path: $CURSOR_RESOURCES"
             return 0
-        elif [ -d "$base_dir/../resources" ]; then # 例如在 bin 目录内
+        elif [ -d "$base_dir/../resources" ]; then # e.g., inside bin directory
             CURSOR_RESOURCES=$(resolve_path "$base_dir/..")
-            log_info "通过二进制路径找到资源目录: $CURSOR_RESOURCES"
+            log_info "Found resources directory via binary path: $CURSOR_RESOURCES"
             return 0
-        elif [ -d "$base_dir/../lib/cursor/resources" ]; then # 另一种常见结构
+        elif [ -d "$base_dir/../lib/cursor/resources" ]; then # Another common structure
             CURSOR_RESOURCES=$(resolve_path "$base_dir/../lib/cursor")
-            log_info "通过二进制路径找到资源目录: $CURSOR_RESOURCES"
+            log_info "Found resources directory via binary path: $CURSOR_RESOURCES"
             return 0
         fi
     fi
     
-    log_warn "未找到Cursor资源目录"
+    log_warn "Cursor resources directory not found"
     return 1
 }
 
-# 检查权限
+# Check permissions
 check_permissions() {
     if [ "$EUID" -ne 0 ]; then
-        log_error "请使用 sudo 运行此脚本 (安装和修改系统文件需要权限)"
-        echo "示例: sudo $0"
+        log_error "Please run this script with sudo (installation and modifying system files requires privileges)"
+        echo "Example: sudo $0"
         exit 1
     fi
 }
 
-# --- 新增/重构：从本地 AppImage 安装 Cursor ---
+# --- New/Refactored: Install Cursor from local AppImage ---
 install_cursor_appimage() {
-    log_info "开始尝试从本地 AppImage 安装 Cursor..."
+    log_info "Starting attempt to install Cursor from local AppImage..."
     local found_appimage_path=""
 
-    # 确保搜索目录存在
+    # Ensure search directory exists
     mkdir -p "$APPIMAGE_SEARCH_DIR"
 
-    # 查找 AppImage 文件
+    # Find AppImage file
     find_appimage() {
-        # 兼容修复：find 参数在不同实现中可能有差异，且 find 非0 会触发 set -e；这里统一兜底为成功返回
+        # Compatibility fix: find parameters may vary across implementations, and find non-zero exit will trigger set -e; unified fallback to success here
         found_appimage_path=$(find "$APPIMAGE_SEARCH_DIR" -maxdepth 1 -name "$APPIMAGE_PATTERN" -print -quit 2>/dev/null || true)
         if [ -z "$found_appimage_path" ]; then
             return 1
@@ -425,149 +425,149 @@ install_cursor_appimage() {
     }
 
     if ! find_appimage; then
-        log_warn "在 '$APPIMAGE_SEARCH_DIR' 目录下未找到 '$APPIMAGE_PATTERN' 文件。"
-        # --- 新增：添加文件名格式提醒 ---
-        log_info "请确保 AppImage 文件名格式类似: Cursor-版本号-架构.AppImage (例如: Cursor-1.0.6-aarch64.AppImage 或 Cursor-x.y.z-x86_64.AppImage)"
-        # --- 结束：添加文件名格式提醒 ---
-        # 等待用户放置文件
-        read -p $"请将 Cursor AppImage 文件放入 '$APPIMAGE_SEARCH_DIR' 目录，然后按 Enter 键继续..."
+        log_warn "No '$APPIMAGE_PATTERN' file found in directory '$APPIMAGE_SEARCH_DIR'."
+        # --- New: Add filename format reminder ---
+        log_info "Please ensure AppImage filename format is similar to: Cursor-version-architecture.AppImage (e.g., Cursor-1.0.6-aarch64.AppImage or Cursor-x.y.z-x86_64.AppImage)"
+        # --- End: Add filename format reminder ---
+        # Wait for user to place file
+        read -p $"Please place the Cursor AppImage file in directory '$APPIMAGE_SEARCH_DIR', then press Enter to continue..."
 
-        # 再次查找
+        # Search again
         if ! find_appimage; then
-            log_error "在 '$APPIMAGE_SEARCH_DIR' 中仍然找不到 '$APPIMAGE_PATTERN' 文件。安装中止。"
+            log_error "Still cannot find '$APPIMAGE_PATTERN' file in '$APPIMAGE_SEARCH_DIR'. Installation aborted."
             return 1
         fi
     fi
 
-    log_info "找到 AppImage 文件: $found_appimage_path"
+    log_info "Found AppImage file: $found_appimage_path"
     local appimage_filename=$(basename "$found_appimage_path")
 
-    # 进入搜索目录操作，避免路径问题
+    # Enter search directory to avoid path issues
     local current_dir=$(pwd)
-    cd "$APPIMAGE_SEARCH_DIR" || { log_error "无法进入目录: $APPIMAGE_SEARCH_DIR"; return 1; }
+    cd "$APPIMAGE_SEARCH_DIR" || { log_error "Cannot enter directory: $APPIMAGE_SEARCH_DIR"; return 1; }
 
-    log_info "设置 '$appimage_filename' 可执行权限..."
+    log_info "Setting executable permission for '$appimage_filename'..."
     chmod +x "$appimage_filename" || {
-        log_error "设置可执行权限失败: $appimage_filename"
+        log_error "Failed to set executable permission: $appimage_filename"
         cd "$current_dir"
         return 1
     }
 
-    log_info "解压 AppImage 文件 '$appimage_filename'..."
-    # 创建临时解压目录
+    log_info "Extracting AppImage file '$appimage_filename'..."
+    # Create temporary extraction directory
     local extract_dir="squashfs-root"
-    rm -rf "$extract_dir" # 清理旧的解压目录（如果存在）
+    rm -rf "$extract_dir" # Clean up old extraction directory (if exists)
     
-    # 执行解压，将输出重定向避免干扰
+    # Perform extraction, redirect output to avoid interference
     if ./"$appimage_filename" --appimage-extract > /dev/null; then
-        log_info "AppImage 解压成功到 '$extract_dir'"
+        log_info "AppImage extracted successfully to '$extract_dir'"
     else
-        log_error "解压 AppImage 失败: $appimage_filename"
-        rm -rf "$extract_dir" # 清理失败的解压
+        log_error "Failed to extract AppImage: $appimage_filename"
+        rm -rf "$extract_dir" # Clean up failed extraction
         cd "$current_dir"
         return 1
     fi
 
-    # 检查解压后的预期目录结构
+    # Check expected directory structure after extraction
     local cursor_source_dir=""
     if [ -d "$extract_dir/usr/share/cursor" ]; then
        cursor_source_dir="$extract_dir/usr/share/cursor"
-    elif [ -d "$extract_dir" ]; then # 有些 AppImage 可能直接在根目录
-       # 进一步检查是否存在关键文件/目录
+    elif [ -d "$extract_dir" ]; then # Some AppImages may be directly in root
+       # Further check if key files/directories exist
        if [ -f "$extract_dir/cursor" ] && [ -d "$extract_dir/resources" ]; then
            cursor_source_dir="$extract_dir"
        fi
     fi
 
     if [ -z "$cursor_source_dir" ]; then
-        log_error "解压后的目录 '$extract_dir' 中未找到预期的 Cursor 文件结构 (例如 'usr/share/cursor' 或直接包含 'cursor' 和 'resources')。"
+        log_error "Expected Cursor file structure not found in extracted directory '$extract_dir' (e.g., 'usr/share/cursor' or containing 'cursor' and 'resources' directly)."
         rm -rf "$extract_dir"
         cd "$current_dir"
         return 1
     fi
-     log_info "找到 Cursor 源文件在: $cursor_source_dir"
+     log_info "Found Cursor source files at: $cursor_source_dir"
 
 
-    log_info "安装 Cursor 到 '$INSTALL_DIR'..."
-    # 如果安装目录已存在，先删除 (确保全新安装)
+    log_info "Installing Cursor to '$INSTALL_DIR'..."
+    # If installation directory exists, remove first (ensure fresh install)
     if [ -d "$INSTALL_DIR" ]; then
-        log_warn "发现已存在的安装目录 '$INSTALL_DIR'，将先移除..."
-        rm -rf "$INSTALL_DIR" || { log_error "移除旧安装目录失败: $INSTALL_DIR"; cd "$current_dir"; return 1; }
+        log_warn "Found existing installation directory '$INSTALL_DIR', will remove first..."
+        rm -rf "$INSTALL_DIR" || { log_error "Failed to remove old installation directory: $INSTALL_DIR"; cd "$current_dir"; return 1; }
     fi
     
-    # 创建安装目录的父目录（如果需要）并设置权限
+    # Create parent directory of installation directory (if needed) and set permissions
     mkdir -p "$(dirname "$INSTALL_DIR")"
     
-    # 移动解压后的内容到安装目录
+    # Move extracted content to installation directory
     if mv "$cursor_source_dir" "$INSTALL_DIR"; then
-        log_info "成功将文件移动到 '$INSTALL_DIR'"
-        # 确保安装目录及其内容归属当前用户（如果需要）
-        chown -R "$CURRENT_USER":"$CURRENT_GROUP" "$INSTALL_DIR" || log_warn "设置 '$INSTALL_DIR' 文件所有权失败，可能需要手动调整"
-        chmod -R u+rwX,go+rX,go-w "$INSTALL_DIR" || log_warn "设置 '$INSTALL_DIR' 文件权限失败，可能需要手动调整"
+        log_info "Successfully moved files to '$INSTALL_DIR'"
+        # Ensure installation directory and contents belong to current user (if needed)
+        chown -R "$CURRENT_USER":"$CURRENT_GROUP" "$INSTALL_DIR" || log_warn "Failed to set file ownership for '$INSTALL_DIR', may need manual adjustment"
+        chmod -R u+rwX,go+rX,go-w "$INSTALL_DIR" || log_warn "Failed to set file permissions for '$INSTALL_DIR', may need manual adjustment"
     else
-        log_error "移动文件到安装目录 '$INSTALL_DIR' 失败"
-        rm -rf "$extract_dir" # 确保清理
-        rm -rf "$INSTALL_DIR" # 清理部分移动的文件
+        log_error "Failed to move files to installation directory '$INSTALL_DIR'"
+        rm -rf "$extract_dir" # Ensure cleanup
+        rm -rf "$INSTALL_DIR" # Clean up partially moved files
         cd "$current_dir"
         return 1
     fi
 
-    # 处理图标和桌面快捷方式 (从脚本执行的原始目录查找)
-    cd "$current_dir" # 返回原始目录查找图标等文件
+    # Handle icon and desktop shortcut (search from script's original execution directory)
+    cd "$current_dir" # Return to original directory to find icons etc.
 
     local icon_source="./cursor.png"
     local desktop_source="./cursor-cursor.desktop"
 
     if [ -f "$icon_source" ]; then
-        log_info "安装图标..."
+        log_info "Installing icon..."
         mkdir -p "$(dirname "$ICON_PATH")"
-        cp "$icon_source" "$ICON_PATH" || log_warn "无法复制图标文件 '$icon_source' 到 '$ICON_PATH'"
-        chmod 644 "$ICON_PATH" || log_warn "设置图标文件权限失败: $ICON_PATH"
+        cp "$icon_source" "$ICON_PATH" || log_warn "Cannot copy icon file '$icon_source' to '$ICON_PATH'"
+        chmod 644 "$ICON_PATH" || log_warn "Failed to set icon file permissions: $ICON_PATH"
     else
-        log_warn "图标文件 '$icon_source' 在脚本当前目录不存在，跳过图标安装。"
-        log_warn "请将 'cursor.png' 文件放置在脚本目录 '$current_dir' 下并重新运行安装（如果需要图标）。"
+        log_warn "Icon file '$icon_source' does not exist in script's current directory, skipping icon installation."
+        log_warn "Please place 'cursor.png' file in script directory '$current_dir' and re-run installation (if icon is needed)."
     fi
 
     if [ -f "$desktop_source" ]; then
-        log_info "安装桌面快捷方式..."
+        log_info "Installing desktop shortcut..."
          mkdir -p "$(dirname "$DESKTOP_FILE")"
-        cp "$desktop_source" "$DESKTOP_FILE" || log_warn "无法创建桌面快捷方式 '$desktop_source' 到 '$DESKTOP_FILE'"
-        chmod 644 "$DESKTOP_FILE" || log_warn "设置桌面文件权限失败: $DESKTOP_FILE"
+        cp "$desktop_source" "$DESKTOP_FILE" || log_warn "Cannot create desktop shortcut '$desktop_source' to '$DESKTOP_FILE'"
+        chmod 644 "$DESKTOP_FILE" || log_warn "Failed to set desktop file permissions: $DESKTOP_FILE"
 
-        # 更新桌面数据库
-        log_info "更新桌面数据库..."
-        update-desktop-database "$(dirname "$DESKTOP_FILE")" &> /dev/null || log_warn "无法更新桌面数据库，快捷方式可能不会立即显示"
+        # Update desktop database
+        log_info "Updating desktop database..."
+        update-desktop-database "$(dirname "$DESKTOP_FILE")" &> /dev/null || log_warn "Cannot update desktop database, shortcut may not appear immediately"
     else
-        log_warn "桌面文件 '$desktop_source' 在脚本当前目录不存在，跳过快捷方式安装。"
-         log_warn "请将 'cursor-cursor.desktop' 文件放置在脚本目录 '$current_dir' 下并重新运行安装（如果需要快捷方式）。"
+        log_warn "Desktop file '$desktop_source' does not exist in script's current directory, skipping shortcut installation."
+         log_warn "Please place 'cursor-cursor.desktop' file in script directory '$current_dir' and re-run installation (if shortcut is needed)."
     fi
 
-    # 创建符号链接到 /usr/local/bin
-    log_info "创建命令行启动链接..."
-    ln -sf "$INSTALL_DIR/cursor" /usr/local/bin/cursor || log_warn "无法创建命令行链接 '/usr/local/bin/cursor'"
+    # Create symbolic link to /usr/local/bin
+    log_info "Creating command line launch link..."
+    ln -sf "$INSTALL_DIR/cursor" /usr/local/bin/cursor || log_warn "Cannot create command line link '/usr/local/bin/cursor'"
 
-    # 清理临时文件
-    log_info "清理临时文件..."
-    cd "$APPIMAGE_SEARCH_DIR" # 返回搜索目录清理
+    # Clean up temporary files
+    log_info "Cleaning up temporary files..."
+    cd "$APPIMAGE_SEARCH_DIR" # Return to search directory for cleanup
     rm -rf "$extract_dir"
-    log_info "正在删除原始 AppImage 文件: $found_appimage_path"
-    rm -f "$appimage_filename" # 删除 AppImage 文件
+    log_info "Deleting original AppImage file: $found_appimage_path"
+    rm -f "$appimage_filename" # Delete AppImage file
 
-    cd "$current_dir" # 确保返回最终目录
+    cd "$current_dir" # Ensure return to final directory
 
-    log_info "Cursor 安装成功！安装目录: $INSTALL_DIR"
+    log_info "Cursor installed successfully! Installation directory: $INSTALL_DIR"
     return 0
 }
-# --- 结束：安装函数 ---
+# --- End: Installation function ---
 
-# 检查并关闭 Cursor 进程
+# Check and stop Cursor process
 
-# 获取 Cursor 相关进程 PID（兼容 pgrep/ps 多种实现）
+# Get Cursor related process PIDs (compatible with pgrep/ps multiple implementations)
 get_cursor_pids() {
     local self_pid="$$"
     local pids=""
 
-    # 优先使用 pgrep（更稳定）：仅按进程名匹配，避免误匹配到脚本命令行（例如 sudo bash ...cursor_linux_id_modifier.sh）
+    # Priority: use pgrep (more stable): match only by process name, avoid false matches to script command line (e.g., sudo bash ...cursor_linux_id_modifier.sh)
     if command -v pgrep >/dev/null 2>&1; then
         pids=$(pgrep -i "cursor" 2>/dev/null || true)
         if [ -z "$pids" ]; then
@@ -583,7 +583,7 @@ get_cursor_pids() {
         fi
     fi
 
-    # 回退：兼容不同 ps 实现（BusyBox 可能不支持 aux / -ef）
+    # Fallback: compatible with different ps implementations (BusyBox may not support aux / -ef)
     if ps aux >/dev/null 2>&1; then
         ps aux 2>/dev/null \
             | grep -i '[c]ursor' \
@@ -613,9 +613,9 @@ get_cursor_pids() {
     return 0
 }
 
-# 打印 Cursor 相关进程详情（用于排障；不依赖固定列结构）
+# Print Cursor related process details (for troubleshooting; doesn't rely on fixed column structure)
 print_cursor_process_details() {
-    log_debug "正在获取 Cursor 进程详细信息："
+    log_debug "Getting Cursor process details:"
 
     if ps aux >/dev/null 2>&1; then
         ps aux 2>/dev/null | grep -i '[c]ursor' | grep -v "cursor_linux_id_modifier.sh" || true
@@ -632,30 +632,30 @@ print_cursor_process_details() {
 }
 
 check_and_kill_cursor() {
-    log_info "检查 Cursor 进程..."
+    log_info "Checking Cursor processes..."
     
     local attempt=1
     local max_attempts=5
     
     while [ $attempt -le $max_attempts ]; do
-        # 跨发行版兼容：优先 pgrep，其次兼容 ps aux/ps -ef/ps 的 PID 列差异
+        # Cross-distro compatibility: prefer pgrep, then compatible with ps aux/ps -ef/ps PID column differences
         local cursor_pids_raw
         cursor_pids_raw=$(get_cursor_pids || true)
-        # 将换行分隔的 PID 列表转换为空格分隔，便于传给 kill（避免依赖 xargs）
+        # Convert newline-separated PID list to space-separated for kill (avoid dependency on xargs)
         CURSOR_PIDS=$(echo "$cursor_pids_raw" | tr '\n' ' ' | sed 's/[[:space:]][[:space:]]*/ /g; s/^ //; s/ $//' || true)
         
         if [ -z "$CURSOR_PIDS" ]; then
-            log_info "未发现运行中的 Cursor 进程"
+            log_info "No running Cursor processes found"
             return 0
         fi
         
-        log_warn "发现 Cursor 进程正在运行: $CURSOR_PIDS"
+        log_warn "Found Cursor processes running: $CURSOR_PIDS"
         print_cursor_process_details
         
-        log_warn "尝试关闭 Cursor 进程..."
+        log_warn "Attempting to stop Cursor processes..."
         
         if [ $attempt -eq $max_attempts ]; then
-            log_warn "尝试强制终止进程..."
+            log_warn "Attempting to force kill processes..."
             kill -9 $CURSOR_PIDS 2>/dev/null || true
         else
             kill $CURSOR_PIDS 2>/dev/null || true
@@ -663,26 +663,26 @@ check_and_kill_cursor() {
         
         sleep 1
         
-        # 再次检查进程是否还在运行
+        # Check again if processes are still running
         if [ -z "$(get_cursor_pids | head -n 1)" ]; then
-            log_info "Cursor 进程已成功关闭"
+            log_info "Cursor processes successfully stopped"
             return 0
         fi
         
-        log_warn "等待进程关闭，尝试 $attempt/$max_attempts..."
+        log_warn "Waiting for processes to stop, attempt $attempt/$max_attempts..."
         ((attempt++))
     done
     
-    log_error "在 $max_attempts 次尝试后仍无法关闭 Cursor 进程"
+    log_error "Unable to stop Cursor processes after $max_attempts attempts"
     print_cursor_process_details
-    log_error "请手动关闭进程后重试"
+    log_error "Please manually close processes and retry"
     exit 1
 }
 
-# 备份配置文件
+# Backup configuration file
 backup_config() {
     if [ ! -f "$STORAGE_FILE" ]; then
-        log_warn "配置文件 '$STORAGE_FILE' 不存在，跳过备份"
+        log_warn "Configuration file '$STORAGE_FILE' does not exist, skipping backup"
         return 0
     fi
     
@@ -691,59 +691,59 @@ backup_config() {
     
     if cp "$STORAGE_FILE" "$backup_file"; then
         chmod 644 "$backup_file"
-        # 确保备份文件归属正确用户
-        chown "$CURRENT_USER":"$CURRENT_GROUP" "$backup_file" || log_warn "设置备份文件所有权失败: $backup_file"
-        log_info "配置已备份到: $backup_file"
+        # Ensure backup file ownership is correct
+        chown "$CURRENT_USER":"$CURRENT_GROUP" "$backup_file" || log_warn "Failed to set backup file ownership: $backup_file"
+        log_info "Configuration backed up to: $backup_file"
     else
-        log_error "备份失败: $STORAGE_FILE"
+        log_error "Backup failed: $STORAGE_FILE"
         exit 1
     fi
-    return 0 # 明确返回成功
+    return 0 # Explicitly return success
 }
 
-# 生成随机 ID
+# Generate random ID
 generate_hex_bytes() {
     local bytes="$1"
 
-    # 优先使用 openssl
+    # Priority: use openssl
     if command -v openssl >/dev/null 2>&1; then
         openssl rand -hex "$bytes"
         return 0
     fi
 
-    # 兜底：/dev/urandom + od（多数发行版可用）
+    # Fallback: /dev/urandom + od (available on most distros)
     if [ -r /dev/urandom ] && command -v od >/dev/null 2>&1; then
-        # 使用更通用的 od 参数写法，兼容更多发行版实现
+        # Use more generic od parameter syntax for broader distro compatibility
         od -An -N "$bytes" -t x1 /dev/urandom | tr -d ' \n'
         return 0
     fi
 
-    # 最后兜底：如果 python3 可用
+    # Final fallback: if python3 is available
     if command -v python3 >/dev/null 2>&1; then
         python3 -c 'import os, sys; print(os.urandom(int(sys.argv[1])).hex())' "$bytes"
         return 0
     fi
 
-    log_error "缺少 openssl/od/python3，无法生成随机数（bytes=$bytes）"
+    log_error "Missing openssl/od/python3, cannot generate random bytes (bytes=$bytes)"
     return 1
 }
 
 generate_random_id() {
-    # 生成32字节(64个十六进制字符)的随机数
+    # Generate 32 bytes (64 hex characters) of random data
     generate_hex_bytes 32
 }
 
-# 生成随机 UUID
+# Generate random UUID
 generate_uuid() {
-    # 在Linux上使用uuidgen生成UUID
+    # Use uuidgen on Linux
     if command -v uuidgen &> /dev/null; then
         uuidgen | tr '[:upper:]' '[:lower:]'
     else
-        # 备选方案：使用/proc/sys/kernel/random/uuid
+        # Alternative: use /proc/sys/kernel/random/uuid
         if [ -f /proc/sys/kernel/random/uuid ]; then
             cat /proc/sys/kernel/random/uuid
         else
-            # 最后备选方案：使用随机 16 bytes 并格式化（避免 sed 捕获组超 9 的兼容性问题）
+            # Final alternative: use random 16 bytes and format (avoid sed capture group >9 compatibility issues)
             local hex
             hex=$(generate_hex_bytes 16) || return 1
             echo "${hex:0:8}-${hex:8:4}-${hex:12:4}-${hex:16:4}-${hex:20:12}"
@@ -751,7 +751,7 @@ generate_uuid() {
     fi
 }
 
-# 规范化 machineId（确保为十六进制字符串）
+# Normalize machineId (ensure it's a hex string)
 normalize_machine_id() {
     local raw="$1"
     local cleaned
@@ -763,14 +763,14 @@ normalize_machine_id() {
     return 1
 }
 
-# 从现有配置读取ID（用于JS注入保持一致）
+# Read IDs from existing config (for JS injection consistency)
 load_ids_from_storage() {
     if [ ! -f "$STORAGE_FILE" ]; then
         return 1
     fi
 
     if ! command -v python3 >/dev/null 2>&1; then
-        log_warn "未检测到 python3，无法从现有配置读取 ID"
+        log_warn "python3 not detected, cannot read IDs from existing config"
         return 1
     fi
 
@@ -818,11 +818,11 @@ PY
         local normalized
         if normalized=$(normalize_machine_id "$CURSOR_ID_MACHINE_ID"); then
             if [ "$normalized" != "$CURSOR_ID_MACHINE_ID" ]; then
-                log_warn "machineId 非标准格式，JS 注入将使用去除连字符后的值"
+                log_warn "machineId non-standard format, JS injection will use value without hyphens"
             fi
             CURSOR_ID_MACHINE_ID="$normalized"
         else
-            log_warn "machineId 无法识别为十六进制，JS 注入将改用新值"
+            log_warn "machineId not recognized as hex, JS injection will use new value"
             CURSOR_ID_MACHINE_ID=""
         fi
     fi
@@ -836,7 +836,7 @@ PY
     return 1
 }
 
-# 仅用于JS注入的ID生成（不写配置）
+# Generate IDs for JS injection only (don't write to config)
 generate_ids_for_js_only() {
     CURSOR_ID_MACHINE_ID=$(generate_random_id)
     CURSOR_ID_MACHINE_GUID=$(generate_uuid)
@@ -848,42 +848,42 @@ generate_ids_for_js_only() {
     CURSOR_ID_MAC_ADDRESS="${CURSOR_ID_MAC_ADDRESS:-00:11:22:33:44:55}"
 }
 
-# 修改现有文件
+# Modify existing file
 modify_or_add_config() {
     local key="$1"
     local value="$2"
     local file="$3"
     
     if [ ! -f "$file" ]; then
-        log_error "配置文件不存在: $file"
+        log_error "Configuration file does not exist: $file"
         return 1
     fi
     
-    # 确保文件对当前执行用户（root）可写
+    # Ensure file is writable by current user (root)
     chmod u+w "$file" || {
-        log_error "无法修改文件权限（写）: $file"
+        log_error "Cannot modify file permissions (write): $file"
         return 1
     }
     
-    # 创建临时文件
+    # Create temporary file
     local temp_file=$(mktemp)
     
-    # 检查key是否存在
+    # Check if key exists
     if grep -q "\"$key\":[[:space:]]*\"[^\"]*\"" "$file"; then
-        # key存在,执行替换 (更精确的匹配)
+        # Key exists, perform replacement (more precise matching)
         sed "s/\\(\"$key\"\\):[[:space:]]*\"[^\"]*\"/\\1: \"$value\"/" "$file" > "$temp_file" || {
-            log_error "修改配置失败 (替换): $key in $file"
+            log_error "Failed to modify config (replace): $key in $file"
             rm -f "$temp_file"
-            chmod u-w "$file" # 恢复权限
+            chmod u-w "$file" # Restore permissions
             return 1
         }
-         log_debug "已替换 key '$key' 在文件 '$file' 中"
+         log_debug "Replaced key '$key' in file '$file'"
     elif grep -q "}" "$file"; then
-         # key不存在, 在最后一个 '}' 前添加新的key-value对
-         # 注意：这种方式比较脆弱，如果 JSON 格式不标准或最后一行不是 '}' 会失败
-         # 🔧 兼容修复：不依赖 GNU sed 的 \n 替换扩展；同时避免在 `}` 独占一行时生成无效 JSON
+         # Key doesn't exist, add new key-value pair before last '}'
+         # Note: This method is fragile and will fail if JSON format is non-standard or last line is not '}'
+         # 🔧 Compatibility fix: Don't rely on GNU sed \n replacement extension; also avoid generating invalid JSON when `}` is on its own line
          if tail -n 1 "$file" | grep -Eq '^[[:space:]]*}[[:space:]]*$'; then
-             # 多行 JSON：在最后一个 `}` 前插入新行，并为上一条属性补上逗号
+             # Multi-line JSON: Insert new line before last `}`, and add comma to previous property
              awk -v key="$key" -v value="$value" '
              { lines[NR] = $0 }
              END {
@@ -914,96 +914,96 @@ modify_or_add_config() {
                  }
              }
              ' "$file" > "$temp_file" || {
-                 log_error "添加配置失败 (注入): $key to $file"
+                 log_error "Failed to add config (inject): $key to $file"
                  rm -f "$temp_file"
-                 chmod u-w "$file" # 恢复权限
+                 chmod u-w "$file" # Restore permissions
                  return 1
              }
          else
-             # 单行 JSON：直接在末尾 `}` 前插入键值（避免依赖 sed 的 \\n 扩展）
+             # Single-line JSON: Insert key-value before ending `}` (avoid relying on sed \n extension)
              sed "s/}[[:space:]]*$/,\"$key\": \"$value\"}/" "$file" > "$temp_file" || {
-                 log_error "添加配置失败 (注入): $key to $file"
+                 log_error "Failed to add config (inject): $key to $file"
                  rm -f "$temp_file"
-                 chmod u-w "$file" # 恢复权限
+                 chmod u-w "$file" # Restore permissions
                  return 1
              }
          fi
-         log_debug "已添加 key '$key' 到文件 '$file' 中"
+         log_debug "Added key '$key' to file '$file'"
     else
-         log_error "无法确定如何添加配置: $key to $file (文件结构可能不标准)"
+         log_error "Unable to determine how to add config: $key to $file (file structure may be non-standard)"
          rm -f "$temp_file"
-         chmod u-w "$file" # 恢复权限
+         chmod u-w "$file" # Restore permissions
          return 1
     fi
 
-    # 检查临时文件是否有效
+    # Check if temp file is valid
     if [ ! -s "$temp_file" ]; then
-        log_error "修改或添加配置后生成的临时文件为空: $key in $file"
+        log_error "Temp file is empty after modifying or adding config: $key in $file"
         rm -f "$temp_file"
-        chmod u-w "$file" # 恢复权限
+        chmod u-w "$file" # Restore permissions
         return 1
     fi
     
-    # 使用 cat 替换原文件内容
+    # Use cat to replace original file content
     cat "$temp_file" > "$file" || {
-        log_error "无法写入更新后的配置到文件: $file"
+        log_error "Failed to write updated config to file: $file"
         rm -f "$temp_file"
-        # 尝试恢复权限（如果失败也无大碍）
+        # Try to restore permissions (no harm if it fails)
         chmod u-w "$file" || true
         return 1
     }
     
     rm -f "$temp_file"
     
-    # 设置所有者和基础权限（root执行时目标文件是用户家目录下的）
-    chown "$CURRENT_USER":"$CURRENT_GROUP" "$file" || log_warn "设置文件所有权失败: $file"
-    chmod 644 "$file" || log_warn "设置文件权限失败: $file" # 用户读写，组和其他读
+    # Set owner and base permissions (when running as root, target file is in user's home directory)
+    chown "$CURRENT_USER":"$CURRENT_GROUP" "$file" || log_warn "Failed to set file ownership: $file"
+    chmod 644 "$file" || log_warn "Failed to set file permissions: $file" # User read/write, group and others read
     
     return 0
 }
 
-# 生成新的配置
+# Generate new config
 generate_new_config() {
     echo
-    log_warn "机器码重置选项"
+    log_warn "Machine code reset option"
     
-    # 使用菜单选择函数询问用户是否重置机器码
+    # Use menu selection function to ask user whether to reset machine code
     set +e
-    # 默认选择“重置”，满足“默认应全部处理”的需求
-    select_menu_option "是否需要重置机器码? (默认：重置并同步修改配置文件)：" "不重置 - 仅修改js文件即可|重置 - 同时修改配置文件和机器码" 1
+    # Default select "Reset" to meet the "default should handle all" requirement
+    select_menu_option "Do you need to reset machine code? (Default: Reset and sync modify config file): " "Do not reset - Only modify js file is enough|Reset - Modify both config file and machine code" 1
     reset_choice=$?
     set -e
     
-    # 记录日志以便调试
-    echo "[INPUT_DEBUG] 机器码重置选项选择: $reset_choice" >> "$LOG_FILE"
+    # Log for debugging
+    echo "[INPUT_DEBUG] Machine code reset option selected: $reset_choice" >> "$LOG_FILE"
     
-    # 确保配置文件目录存在
+    # Ensure config file directory exists
     mkdir -p "$(dirname "$STORAGE_FILE")"
-    chown "$CURRENT_USER":"$CURRENT_GROUP" "$(dirname "$STORAGE_FILE")" || log_warn "设置配置目录所有权失败: $(dirname "$STORAGE_FILE")"
-    chmod 755 "$(dirname "$STORAGE_FILE")" || log_warn "设置配置目录权限失败: $(dirname "$STORAGE_FILE")"
+    chown "$CURRENT_USER":"$CURRENT_GROUP" "$(dirname "$STORAGE_FILE")" || log_warn "Failed to set config directory ownership: $(dirname "$STORAGE_FILE")"
+    chmod 755 "$(dirname "$STORAGE_FILE")" || log_warn "Failed to set config directory permissions: $(dirname "$STORAGE_FILE")"
 
-    # 处理用户选择 - 索引0对应"不重置"选项，索引1对应"重置"选项
+    # Handle user selection - index 0 corresponds to "Do not reset" option, index 1 corresponds to "Reset" option
     if [ "$reset_choice" = "1" ]; then
-        log_info "您选择了重置机器码"
+        log_info "You selected to reset machine code"
         
-        # 检查配置文件是否存在
+        # Check if config file exists
         if [ -f "$STORAGE_FILE" ]; then
-            log_info "发现已有配置文件: $STORAGE_FILE"
+            log_info "Found existing config file: $STORAGE_FILE"
             
-            # 备份现有配置
-            if ! backup_config; then # 如果备份失败，不继续修改
-                 log_error "配置文件备份失败，中止机器码重置。"
-                 return 1 # 返回错误状态
+            # Backup existing config
+            if ! backup_config; then # If backup fails, do not continue modification
+                 log_error "Config file backup failed, aborting machine code reset."
+                 return 1 # Return error status
             fi
             
-            # 生成并设置新的设备ID
+            # Generate and set new device ID
             local new_device_id=$(generate_uuid)
             local new_machine_id=$(generate_random_id)
-            # 🔧 新增: serviceMachineId (用于 storage.serviceMachineId)
+            # 🔧 Added: serviceMachineId (for storage.serviceMachineId)
             local new_service_machine_id=$(generate_uuid)
-            # 🔧 新增: firstSessionDate (重置首次会话日期)
+            # 🔧 Added: firstSessionDate (reset first session date)
             local new_first_session_date=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
-            # 🔧 新增: macMachineId 和 sqmId
+            # 🔧 Added: macMachineId and sqmId
             local new_mac_machine_id=$(generate_random_id)
             local new_sqm_id="{$(generate_uuid | tr '[:lower:]' '[:upper:]')}"
 
@@ -1015,14 +1015,14 @@ generate_new_config() {
             CURSOR_ID_SESSION_ID=$(generate_uuid)
             CURSOR_ID_MAC_ADDRESS="${CURSOR_ID_MAC_ADDRESS:-00:11:22:33:44:55}"
 
-            log_info "正在设置新的设备和机器ID..."
-            log_debug "新设备ID: $new_device_id"
-            log_debug "新机器ID: $new_machine_id"
-            log_debug "新serviceMachineId: $new_service_machine_id"
-            log_debug "新firstSessionDate: $new_first_session_date"
+            log_info "Setting new device and machine IDs..."
+            log_debug "New device ID: $new_device_id"
+            log_debug "New machine ID: $new_machine_id"
+            log_debug "New serviceMachineId: $new_service_machine_id"
+            log_debug "New firstSessionDate: $new_first_session_date"
 
-            # 修改配置文件
-            # 🔧 修复: 添加 storage.serviceMachineId, telemetry.firstSessionDate, telemetry.macMachineId, telemetry.sqmId
+            # Modify config file
+            # 🔧 Fix: Add storage.serviceMachineId, telemetry.firstSessionDate, telemetry.macMachineId, telemetry.sqmId
             local config_success=true
             modify_or_add_config "deviceId" "$new_device_id" "$STORAGE_FILE" || config_success=false
             modify_or_add_config "machineId" "$new_machine_id" "$STORAGE_FILE" || config_success=false
@@ -1034,8 +1034,8 @@ generate_new_config() {
             modify_or_add_config "telemetry.firstSessionDate" "$new_first_session_date" "$STORAGE_FILE" || config_success=false
 
             if [ "$config_success" = true ]; then
-                log_info "配置文件中的所有标识符修改成功"
-                log_info "📋 [详情] 已更新以下标识符："
+                log_info "All identifiers in config file modified successfully"
+                log_info "📋 [Details] Updated the following identifiers:"
                 echo "   🔹 deviceId: ${new_device_id:0:16}..."
                 echo "   🔹 machineId: ${new_machine_id:0:16}..."
                 echo "   🔹 macMachineId: ${new_mac_machine_id:0:16}..."
@@ -1043,121 +1043,121 @@ generate_new_config() {
                 echo "   🔹 serviceMachineId: $new_service_machine_id"
                 echo "   🔹 firstSessionDate: $new_first_session_date"
 
-                # 🔧 新增: 修改 machineid 文件
-                log_info "🔧 [machineid] 正在修改 machineid 文件..."
+                # 🔧 Added: Modify machineid file
+                log_info "🔧 [machineid] Modifying machineid file..."
                 local machineid_file_path="$CURSOR_CONFIG_DIR/machineid"
                 if [ -f "$machineid_file_path" ]; then
-                    # 备份原始 machineid 文件
+                    # Backup original machineid file
                     local machineid_backup="$BACKUP_DIR/machineid.backup_$(date +%Y%m%d_%H%M%S)"
                     cp "$machineid_file_path" "$machineid_backup" 2>/dev/null && \
-                        log_info "💾 [备份] machineid 文件已备份: $machineid_backup"
+                        log_info "💾 [Backup] machineid file backed up: $machineid_backup"
                 fi
-                # 写入新的 serviceMachineId 到 machineid 文件
+                # Write new serviceMachineId to machineid file
                 if echo -n "$new_service_machine_id" > "$machineid_file_path" 2>/dev/null; then
-                    log_info "✅ [machineid] machineid 文件修改成功: $new_service_machine_id"
-                    # 设置 machineid 文件为只读
+                    log_info "✅ [machineid] machineid file modified successfully: $new_service_machine_id"
+                    # Set machineid file to read-only
                     chmod 444 "$machineid_file_path" 2>/dev/null && \
-                        log_info "🔒 [保护] machineid 文件已设置为只读"
+                        log_info "🔒 [Protect] machineid file set to read-only"
                 else
-                    log_warn "⚠️  [machineid] machineid 文件修改失败"
-                    log_info "💡 [提示] 可手动修改文件: $machineid_file_path"
+                    log_warn "⚠️  [machineid] machineid file modification failed"
+                    log_info "💡 [Tip] Can manually modify file: $machineid_file_path"
                 fi
 
-                # 🔧 新增: 修改 .updaterId 文件（更新器设备标识符）
-                log_info "🔧 [updaterId] 正在修改 .updaterId 文件..."
+                # 🔧 Added: Modify .updaterId file (updater device identifier)
+                log_info "🔧 [updaterId] Modifying .updaterId file..."
                 local updater_id_file_path="$CURSOR_CONFIG_DIR/.updaterId"
                 if [ -f "$updater_id_file_path" ]; then
-                    # 备份原始 .updaterId 文件
+                    # Backup original .updaterId file
                     local updater_id_backup="$BACKUP_DIR/.updaterId.backup_$(date +%Y%m%d_%H%M%S)"
                     cp "$updater_id_file_path" "$updater_id_backup" 2>/dev/null && \
-                        log_info "💾 [备份] .updaterId 文件已备份: $updater_id_backup"
+                        log_info "💾 [Backup] .updaterId file backed up: $updater_id_backup"
                 fi
-                # 生成新的 updaterId（UUID格式）
+                # Generate new updaterId (UUID format)
                 local new_updater_id=$(generate_uuid)
                 if echo -n "$new_updater_id" > "$updater_id_file_path" 2>/dev/null; then
-                    log_info "✅ [updaterId] .updaterId 文件修改成功: $new_updater_id"
-                    # 设置 .updaterId 文件为只读
+                    log_info "✅ [updaterId] .updaterId file modified successfully: $new_updater_id"
+                    # Set .updaterId file to read-only
                     chmod 444 "$updater_id_file_path" 2>/dev/null && \
-                        log_info "🔒 [保护] .updaterId 文件已设置为只读"
+                        log_info "🔒 [Protect] .updaterId file set to read-only"
                 else
-                    log_warn "⚠️  [updaterId] .updaterId 文件修改失败"
-                    log_info "💡 [提示] 可手动修改文件: $updater_id_file_path"
+                    log_warn "⚠️  [updaterId] .updaterId file modification failed"
+                    log_info "💡 [Tip] Can manually modify file: $updater_id_file_path"
                 fi
             else
-                log_error "配置文件中的部分标识符修改失败"
-                # 注意：即使失败，备份仍在，但配置文件可能已部分修改
-                return 1 # 返回错误状态
+                log_error "Some identifiers in config file failed to modify"
+                # Note: Even if failed, backup still exists, but config file may be partially modified
+                return 1 # Return error status
             fi
         else
-            log_warn "未找到配置文件 '$STORAGE_FILE'，无法重置机器码。如果这是首次安装，这是正常的。"
-            # 即使文件不存在，也认为此步骤（不执行）是"成功"的，允许继续
+            log_warn "Config file '$STORAGE_FILE' not found, cannot reset machine code. This is normal if this is the first installation."
+            # Even if file doesn't exist, consider this step (not executed) as "successful", allow to continue
         fi
     else
-        log_info "您选择了不重置机器码，将仅修改js文件"
+        log_info "You selected not to reset machine code, will only modify js files"
         
-        # 检查配置文件是否存在并备份（如果存在）
+        # Check if config file exists and backup (if exists)
         if [ -f "$STORAGE_FILE" ]; then
-            log_info "发现已有配置文件: $STORAGE_FILE"
+            log_info "Found existing config file: $STORAGE_FILE"
             if ! backup_config; then
-                 log_error "配置文件备份失败，中止操作。"
-                 return 1 # 返回错误状态
+                 log_error "Config file backup failed, aborting operation."
+                 return 1 # Return error status
             fi
             if load_ids_from_storage; then
-                log_info "已从现有配置读取 ID，JS 注入将保持一致"
+                log_info "IDs read from existing config, JS injection will remain consistent"
             else
-                log_warn "无法从现有配置读取 ID，JS 注入将使用新生成的 ID（不会修改配置）"
+                log_warn "Unable to read IDs from existing config, JS injection will use newly generated IDs (config will not be modified)"
                 generate_ids_for_js_only
             fi
         else
-            log_warn "未找到配置文件 '$STORAGE_FILE'，跳过备份。"
-            log_warn "无法读取现有ID，JS 注入将使用新生成的 ID（不会修改配置）"
+            log_warn "Config file '$STORAGE_FILE' not found, skipping backup."
+            log_warn "Unable to read existing IDs, JS injection will use newly generated IDs (config will not be modified)"
             generate_ids_for_js_only
         fi
     fi
     
     echo
-    log_info "配置处理完成"
-    return 0 # 明确返回成功
+    log_info "Config processing completed"
+    return 0 # Explicitly return success
 }
 
-# 查找Cursor的JS文件
+# Find Cursor JS files
 find_cursor_js_files() {
-    log_info "查找Cursor的JS文件..."
+    log_info "Finding Cursor JS files..."
     
     local js_files=()
     local found=false
     
-    # 确保 CURSOR_RESOURCES 已设置
+    # Ensure CURSOR_RESOURCES is set
     if [ -z "$CURSOR_RESOURCES" ] || [ ! -d "$CURSOR_RESOURCES" ]; then
-        log_error "Cursor 资源目录未找到或无效 ($CURSOR_RESOURCES)，无法查找 JS 文件。"
+        log_error "Cursor resources directory not found or invalid ($CURSOR_RESOURCES), cannot find JS files."
         return 1
     fi
 
-    log_debug "在资源目录中搜索JS文件: $CURSOR_RESOURCES"
+    log_debug "Searching for JS files in resources directory: $CURSOR_RESOURCES"
     
-    # 在资源目录中递归搜索特定JS文件
-    # 注意：这些模式可能需要根据 Cursor 版本更新
+    # Recursively search for specific JS files in resources directory
+    # Note: These patterns may need to be updated based on Cursor version
     local js_patterns=(
         "resources/app/out/vs/workbench/api/node/extensionHostProcess.js"
         "resources/app/out/main.js"
         "resources/app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js"
         "resources/app/out/vs/code/node/cliProcessMain.js"
-        # 添加其他可能的路径模式
-        "app/out/vs/workbench/api/node/extensionHostProcess.js" # 如果资源目录是 app 的父目录
+        # Add other possible path patterns
+        "app/out/vs/workbench/api/node/extensionHostProcess.js" # If resources directory is parent of app
         "app/out/main.js"
         "app/out/vs/code/electron-utility/sharedProcess/sharedProcessMain.js"
         "app/out/vs/code/node/cliProcessMain.js"
     )
     
     for pattern in "${js_patterns[@]}"; do
-        # 使用 find 在 CURSOR_RESOURCES 下查找完整路径
-        # 兼容修复：find 遇到错误返回非0可能触发 set -e，这里统一兜底为成功返回
+        # Use find to locate full path under CURSOR_RESOURCES
+        # Compatibility fix: find returning non-zero on error may trigger set -e, here uniformly fallback to successful return
         local files=$(find "$CURSOR_RESOURCES" -path "*/$pattern" -type f 2>/dev/null || true)
         if [ -n "$files" ]; then
             while IFS= read -r file; do
-                # 检查文件是否已添加
+                # Check if file has already been added
                 if [[ ! " ${js_files[@]} " =~ " ${file} " ]]; then
-                    log_info "找到JS文件: $file"
+                    log_info "Found JS file: $file"
                     js_files+=("$file")
                     found=true
                 fi
@@ -1165,57 +1165,57 @@ find_cursor_js_files() {
         fi
     done
     
-    # 如果还没找到，尝试更通用的搜索（可能误报）
+    # If still not found, try more general search (may have false positives)
     if [ "$found" = false ]; then
-        log_warn "在标准路径模式中未找到JS文件，尝试在资源目录 '$CURSOR_RESOURCES' 中进行更广泛的搜索..."
-        # 查找包含特定关键字的 JS 文件
+        log_warn "JS files not found in standard path patterns, trying broader search in resources directory '$CURSOR_RESOURCES'..."
+        # Find JS files containing specific keywords
         local files=$(find "$CURSOR_RESOURCES" -name "*.js" -type f -exec grep -lE 'IOPlatformUUID|x-cursor-checksum|getMachineId' {} \; 2>/dev/null || true)
         if [ -n "$files" ]; then
             while IFS= read -r file; do
                  if [[ ! " ${js_files[@]} " =~ " ${file} " ]]; then
-                     log_info "通过关键字找到可能的JS文件: $file"
+                     log_info "Found possible JS file by keyword: $file"
                      js_files+=("$file")
                      found=true
                  fi
             done <<< "$files"
         else
-             log_warn "在资源目录 '$CURSOR_RESOURCES' 中通过关键字也未能找到 JS 文件。"
+             log_warn "Also failed to find JS files by keyword in resources directory '$CURSOR_RESOURCES'."
         fi
     fi
 
     if [ "$found" = false ]; then
-        log_error "在资源目录 '$CURSOR_RESOURCES' 中未找到任何可修改的JS文件。"
-        log_error "请检查 Cursor 安装是否完整，或脚本中的 JS 路径模式是否需要更新。"
+        log_error "No modifiable JS files found in resources directory '$CURSOR_RESOURCES'."
+        log_error "Please check if Cursor installation is complete, or if JS path patterns in script need updating."
         return 1
     fi
     
-    # 去重（理论上上面的检查已经处理，但以防万一）
+    # Deduplicate (theoretically handled by above check, but just in case)
     IFS=" " read -r -a CURSOR_JS_FILES <<< "$(echo "${js_files[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
     
-    log_info "找到 ${#CURSOR_JS_FILES[@]} 个唯一的JS文件需要处理。"
+    log_info "Found ${#CURSOR_JS_FILES[@]} unique JS files to process."
     return 0
 }
 
-# 修改Cursor的JS文件
-# 🔧 修改Cursor内核JS文件实现设备识别绕过（增强版三重方案）
-# 方案A: someValue占位符替换 - 稳定锚点，不依赖混淆后的函数名
-# 方案B: b6 定点重写 - 机器码源函数直接返回固定值
-# 方案C: Loader Stub + 外置 Hook - 主/共享进程仅加载外置 Hook 文件
+# Modify Cursor JS files
+# 🔧 Modify Cursor core JS files to bypass device identification (enhanced triple solution)
+# Plan A: someValue placeholder replacement - stable anchor, does not depend on obfuscated function names
+# Plan B: b6 fixed-point rewrite - machine code source function directly returns fixed value
+# Plan C: Loader Stub + external Hook - main/shared process only loads external Hook file
 modify_cursor_js_files() {
-    log_info "🔧 [内核修改] 开始修改Cursor内核JS文件实现设备识别绕过..."
-    log_info "💡 [方案] 使用增强版三重方案：占位符替换 + b6 定点重写 + Loader Stub + 外置 Hook"
+    log_info "🔧 [Core Modification] Starting to modify Cursor core JS files to bypass device identification..."
+    log_info "💡 [Solution] Using enhanced triple solution: placeholder replacement + b6 fixed-point rewrite + Loader Stub + external Hook"
 
-    # 先查找需要修改的JS文件
+    # First find JS files that need to be modified
     if ! find_cursor_js_files; then
         return 1
     fi
 
     if [ ${#CURSOR_JS_FILES[@]} -eq 0 ]; then
-        log_error "JS 文件列表为空，无法继续修改。"
+        log_error "JS file list is empty, cannot continue modification."
         return 1
     fi
 
-    # 生成或复用设备标识符（优先使用配置中读取的值）
+    # Generate or reuse device identifiers (prefer values read from config)
     local machine_id="${CURSOR_ID_MACHINE_ID:-}"
     local machine_guid="${CURSOR_ID_MACHINE_GUID:-}"
     local device_id="${CURSOR_ID_DEVICE_ID:-}"
@@ -1256,9 +1256,9 @@ modify_cursor_js_files() {
     fi
 
     if [ "$ids_missing" = true ]; then
-        log_warn "部分 ID 未从配置获取，已生成新值用于 JS 注入"
+        log_warn "Some IDs not obtained from config, new values generated for JS injection"
     else
-        log_info "已使用配置中的设备标识符进行 JS 注入"
+        log_info "Using device identifiers from config for JS injection"
     fi
 
     CURSOR_ID_MACHINE_ID="$machine_id"
@@ -1270,18 +1270,18 @@ modify_cursor_js_files() {
     CURSOR_ID_FIRST_SESSION_DATE="$first_session_date"
     CURSOR_ID_MAC_ADDRESS="$mac_address"
 
-    log_info "🔑 [准备] 设备标识符已就绪"
+    log_info "🔑 [Prepare] Device identifiers ready"
     log_info "   machineId: ${machine_id:0:16}..."
     log_info "   machineGuid: ${machine_guid:0:16}..."
     log_info "   deviceId: ${device_id:0:16}..."
     log_info "   macMachineId: ${mac_machine_id:0:16}..."
     log_info "   sqmId: $sqm_id"
 
-    # 每次执行都删除旧配置并重新生成，确保获得新的设备标识符
+    # Delete old config and regenerate on each execution to ensure new device identifiers are obtained
     local ids_config_path="$TARGET_HOME/.cursor_ids.json"
     if [ -f "$ids_config_path" ]; then
         rm -f "$ids_config_path"
-        log_info "🗑️  [清理] 已删除旧的 ID 配置文件"
+        log_info "🗑️  [Cleanup] Deleted old ID config file"
     fi
     cat > "$ids_config_path" << EOF
 {
@@ -1297,9 +1297,9 @@ modify_cursor_js_files() {
 }
 EOF
     chown "$CURRENT_USER":"$CURRENT_GROUP" "$ids_config_path" 2>/dev/null || true
-    log_info "💾 [保存] 新的 ID 配置已保存到: $ids_config_path"
+    log_info "💾 [Save] New ID config saved to: $ids_config_path"
 
-    # 部署外置 Hook 文件（供 Loader Stub 加载，支持多域名备用下载）
+    # Deploy external Hook file (for Loader Stub to load, supports multiple domain fallback downloads)
     local hook_target_path="$TARGET_HOME/.cursor_hook.js"
     local script_dir
     script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -1311,127 +1311,127 @@ EOF
         "https://gh-proxy.com/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
         "https://gh.chjina.com/https://raw.githubusercontent.com/yuaotian/go-cursor-help/refs/heads/master/scripts/hook/cursor_hook.js"
     )
-    # 支持通过环境变量覆盖下载节点（逗号分隔）
+    # Support overriding download nodes via environment variable (comma-separated)
     if [ -n "$CURSOR_HOOK_DOWNLOAD_URLS" ]; then
         IFS=',' read -r -a hook_download_urls <<< "$CURSOR_HOOK_DOWNLOAD_URLS"
-        log_info "ℹ️  [Hook] 检测到自定义下载节点列表，将优先使用"
+        log_info "ℹ️  [Hook] Detected custom download node list, will prioritize"
     fi
 
     if [ -f "$hook_source_path" ]; then
         if cp "$hook_source_path" "$hook_target_path"; then
             chown "$CURRENT_USER":"$CURRENT_GROUP" "$hook_target_path" 2>/dev/null || true
-            log_info "✅ [Hook] 外置 Hook 已部署: $hook_target_path"
+            log_info "✅ [Hook] External Hook deployed: $hook_target_path"
         else
-            log_warn "⚠️  [Hook] 本地 Hook 复制失败，尝试在线下载..."
+            log_warn "⚠️  [Hook] Local Hook copy failed, trying online download..."
         fi
     fi
 
     if [ ! -f "$hook_target_path" ]; then
-        log_info "ℹ️  [Hook] 正在下载外置 Hook，用于设备标识拦截..."
+        log_info "ℹ️  [Hook] Downloading external Hook for device identifier interception..."
         local hook_downloaded=false
         local total_urls=${#hook_download_urls[@]}
         if [ "$total_urls" -eq 0 ]; then
-            log_warn "⚠️  [Hook] 下载节点列表为空，跳过在线下载"
+            log_warn "⚠️  [Hook] Download node list is empty, skipping online download"
         elif command -v curl >/dev/null 2>&1; then
             local index=0
             for url in "${hook_download_urls[@]}"; do
                 index=$((index + 1))
-                log_info "⏳ [Hook] ($index/$total_urls) 当前下载节点: $url"
+                log_info "⏳ [Hook] ($index/$total_urls) Current download node: $url"
 
-                # 兼容修复：部分 curl 版本可能不支持 --progress-bar，失败时回退为基础参数
+                # Compatibility fix: some curl versions may not support --progress-bar, fallback to basic params on failure
                 if curl -fL --progress-bar "$url" -o "$hook_target_path"; then
                     chown "$CURRENT_USER":"$CURRENT_GROUP" "$hook_target_path" 2>/dev/null || true
-                    log_info "✅ [Hook] 外置 Hook 已在线下载: $hook_target_path"
+                    log_info "✅ [Hook] External Hook downloaded online: $hook_target_path"
                     hook_downloaded=true
                     break
                 fi
 
                 rm -f "$hook_target_path"
-                log_warn "⚠️  [Hook] curl 下载失败，尝试回退参数重试: $url"
+                log_warn "⚠️  [Hook] curl download failed, trying fallback params: $url"
                 if curl -fL "$url" -o "$hook_target_path"; then
                     chown "$CURRENT_USER":"$CURRENT_GROUP" "$hook_target_path" 2>/dev/null || true
-                    log_info "✅ [Hook] 外置 Hook 已在线下载: $hook_target_path"
+                    log_info "✅ [Hook] External Hook downloaded online: $hook_target_path"
                     hook_downloaded=true
                     break
                 fi
 
                 rm -f "$hook_target_path"
-                log_warn "⚠️  [Hook] 外置 Hook 下载失败: $url"
+                log_warn "⚠️  [Hook] External Hook download failed: $url"
             done
         elif command -v wget >/dev/null 2>&1; then
             local index=0
             for url in "${hook_download_urls[@]}"; do
                 index=$((index + 1))
-                log_info "⏳ [Hook] ($index/$total_urls) 当前下载节点: $url"
+                log_info "⏳ [Hook] ($index/$total_urls) Current download node: $url"
 
-                # 兼容修复：BusyBox/精简版 wget 可能不支持 --progress=bar:force，失败时回退为基础参数
+                # Compatibility fix: BusyBox/minimal wget may not support --progress=bar:force, fallback to basic params on failure
                 if wget --progress=bar:force -O "$hook_target_path" "$url"; then
                     chown "$CURRENT_USER":"$CURRENT_GROUP" "$hook_target_path" 2>/dev/null || true
-                    log_info "✅ [Hook] 外置 Hook 已在线下载: $hook_target_path"
+                    log_info "✅ [Hook] External Hook downloaded online: $hook_target_path"
                     hook_downloaded=true
                     break
                 fi
 
                 rm -f "$hook_target_path"
-                log_warn "⚠️  [Hook] wget 下载失败，尝试回退参数重试: $url"
+                log_warn "⚠️  [Hook] wget download failed, trying fallback params: $url"
                 if wget -O "$hook_target_path" "$url"; then
                     chown "$CURRENT_USER":"$CURRENT_GROUP" "$hook_target_path" 2>/dev/null || true
-                    log_info "✅ [Hook] 外置 Hook 已在线下载: $hook_target_path"
+                    log_info "✅ [Hook] External Hook downloaded online: $hook_target_path"
                     hook_downloaded=true
                     break
                 fi
 
                 rm -f "$hook_target_path"
-                log_warn "⚠️  [Hook] 外置 Hook 下载失败: $url"
+                log_warn "⚠️  [Hook] External Hook download failed: $url"
             done
         else
-            log_warn "⚠️  [Hook] 未检测到 curl/wget，无法在线下载 Hook"
+            log_warn "⚠️  [Hook] curl/wget not detected, cannot download Hook online"
         fi
         if [ "$hook_downloaded" != true ] && [ ! -f "$hook_target_path" ]; then
-            log_warn "⚠️  [Hook] 外置 Hook 全部下载失败"
+            log_warn "⚠️  [Hook] External Hook all downloads failed"
         fi
     fi
 
     local modified_count=0
     local file_modification_status=()
 
-    # 处理每个文件：创建原始备份或从原始备份恢复
+    # Process each file: create original backup or restore from original backup
     for file in "${CURSOR_JS_FILES[@]}"; do
-        log_info "📝 [处理] 正在处理: $(basename "$file")"
+        log_info "📝 [Process] Processing: $(basename "$file")"
 
         if [ ! -f "$file" ]; then
-            log_error "文件不存在: $file，跳过处理。"
+            log_error "File does not exist: $file, skipping."
             file_modification_status+=("'$(basename "$file")': Not Found")
             continue
         fi
 
-        # 创建备份目录
+        # Create backup directory
         local backup_dir="$(dirname "$file")/backups"
         mkdir -p "$backup_dir" 2>/dev/null || true
 
         local file_name=$(basename "$file")
         local original_backup="$backup_dir/$file_name.original"
 
-        # 如果原始备份不存在，先创建
+        # If original backup does not exist, create it first
         if [ ! -f "$original_backup" ]; then
-            # 检查当前文件是否已被修改过
+            # Check if current file has already been modified
             if grep -q "__cursor_patched__" "$file" 2>/dev/null; then
-                log_warn "⚠️  [警告] 文件已被修改但无原始备份，将使用当前版本作为基础"
+                log_warn "⚠️  [Warning] File has been modified but no original backup exists, will use current version as base"
             fi
             cp "$file" "$original_backup"
             chown "$CURRENT_USER":"$CURRENT_GROUP" "$original_backup" 2>/dev/null || true
             chmod 444 "$original_backup" 2>/dev/null || true
-            log_info "✅ [备份] 原始备份创建成功: $file_name"
+            log_info "✅ [Backup] Original backup created successfully: $file_name"
         else
-            # 从原始备份恢复，确保每次都是干净的注入
-            log_info "🔄 [恢复] 从原始备份恢复: $file_name"
+            # Restore from original backup to ensure clean injection each time
+            log_info "🔄 [Restore] Restoring from original backup: $file_name"
             cp "$original_backup" "$file"
         fi
 
-        # 创建时间戳备份（记录每次修改前的状态）
+        # Create timestamp backup (record state before each modification)
         local backup_file="$backup_dir/$file_name.backup_$(date +%Y%m%d_%H%M%S)"
         if ! cp "$file" "$backup_file"; then
-            log_error "无法创建文件备份: $file"
+            log_error "Unable to create file backup: $file"
             file_modification_status+=("'$(basename "$file")': Backup Failed")
             continue
         fi
@@ -1439,24 +1439,24 @@ EOF
         chmod 444 "$backup_file" 2>/dev/null || true
 
         chmod u+w "$file" || {
-            log_error "无法修改文件权限（写）: $file"
+            log_error "Unable to modify file permissions (write): $file"
             file_modification_status+=("'$(basename "$file")': Permission Error")
             continue
         }
 
         local replaced=false
 
-        # ========== 方法A: someValue占位符替换（稳定锚点） ==========
-        # 重要说明：
-        # 当前 Cursor 的 main.js 中占位符通常是以字符串字面量形式出现，例如：
+        # ========== Method A: someValue placeholder replacement (stable anchor) ==========
+        # Important notes:
+        # In current Cursor's main.js, placeholders usually appear as string literals, e.g.:
         #   this.machineId="someValue.machineId"
-        # 如果直接把 someValue.machineId 替换成 "\"<真实值>\""，会形成 ""<真实值>"" 导致 JS 语法错误。
-        # 因此这里优先替换完整的字符串字面量（包含外层引号），再兜底替换不带引号的占位符。
+        # If we directly replace someValue.machineId with "\"<real_value>\"", it will form ""<real_value>"" causing JS syntax error.
+        # Therefore, here we prioritize replacing complete string literals (including outer quotes), then fallback to replacing unquoted placeholders.
         if grep -q 'someValue\.machineId' "$file"; then
             sed_inplace "s/\"someValue\.machineId\"/\"${machine_id}\"/g" "$file"
             sed_inplace "s/'someValue\.machineId'/\"${machine_id}\"/g" "$file"
             sed_inplace "s/someValue\.machineId/\"${machine_id}\"/g" "$file"
-            log_info "   ✓ [方案A] 替换 someValue.machineId"
+            log_info "   ✓ [Plan A] Replace someValue.machineId"
             replaced=true
         fi
 
@@ -1464,7 +1464,7 @@ EOF
             sed_inplace "s/\"someValue\.macMachineId\"/\"${mac_machine_id}\"/g" "$file"
             sed_inplace "s/'someValue\.macMachineId'/\"${mac_machine_id}\"/g" "$file"
             sed_inplace "s/someValue\.macMachineId/\"${mac_machine_id}\"/g" "$file"
-            log_info "   ✓ [方案A] 替换 someValue.macMachineId"
+            log_info "   ✓ [Plan A] Replace someValue.macMachineId"
             replaced=true
         fi
 
@@ -1472,7 +1472,7 @@ EOF
             sed_inplace "s/\"someValue\.devDeviceId\"/\"${device_id}\"/g" "$file"
             sed_inplace "s/'someValue\.devDeviceId'/\"${device_id}\"/g" "$file"
             sed_inplace "s/someValue\.devDeviceId/\"${device_id}\"/g" "$file"
-            log_info "   ✓ [方案A] 替换 someValue.devDeviceId"
+            log_info "   ✓ [Plan A] Replace someValue.devDeviceId"
             replaced=true
         fi
 
@@ -1480,7 +1480,7 @@ EOF
             sed_inplace "s/\"someValue\.sqmId\"/\"${sqm_id}\"/g" "$file"
             sed_inplace "s/'someValue\.sqmId'/\"${sqm_id}\"/g" "$file"
             sed_inplace "s/someValue\.sqmId/\"${sqm_id}\"/g" "$file"
-            log_info "   ✓ [方案A] 替换 someValue.sqmId"
+            log_info "   ✓ [Plan A] Replace someValue.sqmId"
             replaced=true
         fi
 
@@ -1488,7 +1488,7 @@ EOF
             sed_inplace "s/\"someValue\.sessionId\"/\"${session_id}\"/g" "$file"
             sed_inplace "s/'someValue\.sessionId'/\"${session_id}\"/g" "$file"
             sed_inplace "s/someValue\.sessionId/\"${session_id}\"/g" "$file"
-            log_info "   ✓ [方案A] 替换 someValue.sessionId"
+            log_info "   ✓ [Plan A] Replace someValue.sessionId"
             replaced=true
         fi
 
@@ -1496,33 +1496,33 @@ EOF
             sed_inplace "s/\"someValue\.firstSessionDate\"/\"${first_session_date}\"/g" "$file"
             sed_inplace "s/'someValue\.firstSessionDate'/\"${first_session_date}\"/g" "$file"
             sed_inplace "s/someValue\.firstSessionDate/\"${first_session_date}\"/g" "$file"
-            log_info "   ✓ [方案A] 替换 someValue.firstSessionDate"
+            log_info "   ✓ [Plan A] Replace someValue.firstSessionDate"
             replaced=true
         fi
 
-        # ========== 方法B: b6 定点重写（机器码源函数，仅 main.js） ==========
+        # ========== Method B: b6 fixed-point rewrite (machine code source function, main.js only) ==========
         local b6_patched=false
         if [ "$(basename "$file")" = "main.js" ]; then
             if command -v python3 >/dev/null 2>&1; then
                 local b6_result
                 b6_result=$(python3 - "$file" "$machine_guid" "$machine_id" <<'PY'
-# 🔧 修复：使用标准 4 空格缩进，避免 IndentationError
+# 🔧 Fix: Use standard 4-space indentation to avoid IndentationError
 import re, sys
 
 def diag(msg):
-    print(f"[方案B][诊断] {msg}", file=sys.stderr)
+    print(f"[Plan B][Diagnostics] {msg}", file=sys.stderr)
 
 path, machine_guid, machine_id = sys.argv[1], sys.argv[2], sys.argv[3]
 
 with open(path, "r", encoding="utf-8") as f:
     data = f.read()
 
-# ✅ 1+3 融合：限定 out-build/vs/base/node/id.js 模块内做特征匹配 + 花括号配对定位函数边界
+# ✅ 1+3 fusion: limit to out-build/vs/base/node/id.js module for feature matching + brace pairing to locate function boundaries
 marker = "out-build/vs/base/node/id.js"
 marker_index = data.find(marker)
 if marker_index < 0:
     print("NOT_FOUND")
-    diag(f"未找到模块标记: {marker}")
+    diag(f"Module marker not found: {marker}")
     raise SystemExit(0)
 
 window_end = min(len(data), marker_index + 200000)
@@ -1612,7 +1612,7 @@ def find_matching_brace(text, open_index, max_scan=20000):
         i += 1
     return None
 
-# 🔧 修复：避免 raw string + 单引号 + ['"] 字符组导致的语法错误；同时修正正则转义，提升 b6 特征匹配命中率
+# 🔧 Fix: Avoid syntax errors from raw string + single quotes + ['"] character groups; also fix regex escaping to improve b6 feature matching hit rate
 hash_re = re.compile(r"""createHash\(["']sha256["']\)""")
 sig_re = re.compile(r'^async function (\w+)\((\w+)\)')
 
@@ -1624,39 +1624,39 @@ for idx, hm in enumerate(hash_matches, start=1):
     func_start = window.rfind("async function", 0, hash_pos)
     if func_start < 0:
         if idx <= 3:
-            diag(f"候选#{idx}: 未找到 async function 起点")
+            diag(f"Candidate#{idx}: async function start not found")
         continue
 
     open_brace = window.find("{", func_start)
     if open_brace < 0:
         if idx <= 3:
-            diag(f"候选#{idx}: 未找到函数起始花括号")
+            diag(f"Candidate#{idx}: Function opening brace not found")
         continue
 
     end_brace = find_matching_brace(window, open_brace, max_scan=20000)
     if end_brace is None:
         if idx <= 3:
-            diag(f"候选#{idx}: 花括号配对失败（扫描上限内未闭合）")
+            diag(f"Candidate#{idx}: Brace pairing failed (not closed within scan limit)")
         continue
 
     func_text = window[func_start:end_brace + 1]
     if len(func_text) > 8000:
         if idx <= 3:
-            diag(f"候选#{idx}: 函数体过长 len={len(func_text)}，已跳过")
+            diag(f"Candidate#{idx}: Function body too long len={len(func_text)}, skipped")
         continue
 
     sm = sig_re.match(func_text)
     if not sm:
         if idx <= 3:
-            diag(f"候选#{idx}: 未解析到函数签名（async function name(param)）")
+            diag(f"Candidate#{idx}: Function signature not parsed (async function name(param))")
         continue
     name, param = sm.group(1), sm.group(2)
 
-    # 特征校验：sha256 + hex digest + return param ? raw : hash
+    # Feature validation: sha256 + hex digest + return param ? raw : hash
     has_digest = re.search(r"""\.digest\(["']hex["']\)""", func_text) is not None
     has_return = re.search(r'return\s+' + re.escape(param) + r'\?\w+:\w+\}', func_text) is not None
     if idx <= 3:
-        diag(f"候选#{idx}: {name}({param}) len={len(func_text)} digest={has_digest} return={has_return}")
+        diag(f"Candidate#{idx}: {name}({param}) len={len(func_text)} digest={has_digest} return={has_return}")
     if not has_digest:
         continue
     if not has_return:
@@ -1668,34 +1668,34 @@ for idx, hm in enumerate(hash_matches, start=1):
     new_data = data[:abs_start] + replacement + data[abs_end + 1:]
     with open(path, "w", encoding="utf-8") as f:
         f.write(new_data)
-    diag(f"命中并重写: {name}({param}) len={len(func_text)}")
+    diag(f"Hit and rewrite: {name}({param}) len={len(func_text)}")
     print("PATCHED")
     break
 else:
-    diag("未找到满足特征的候选函数")
+    diag("No candidate function meeting features found")
     print("NOT_FOUND")
 PY
                  )
                 if [ "$b6_result" = "PATCHED" ]; then
-                    log_info "   ✓ [方案B] 已重写 b6 特征函数"
+                    log_info "   ✓ [Plan B] Rewrote b6 feature function"
                     b6_patched=true
                 else
-                    log_warn "⚠️  [方案B] 未定位到 b6 特征函数"
+                    log_warn "⚠️  [Plan B] b6 feature function not located"
                 fi
             else
-                log_warn "⚠️  [方案B] 未检测到 python3，跳过 b6 定点重写"
+                log_warn "⚠️  [Plan B] python3 not detected, skipping b6 fixed-point rewrite"
             fi
         fi
 
-        # ========== 方法C: Loader Stub 注入 ==========
-        local inject_code='// ========== Cursor Hook Loader 开始 ==========
+        # ========== Method C: Loader Stub Injection ==========
+        local inject_code='// ========== Cursor Hook Loader Start ==========
 ;(async function(){/*__cursor_patched__*/
 "use strict";
 if(globalThis.__cursor_hook_loaded__)return;
 globalThis.__cursor_hook_loaded__=true;
 
 try{
-    // 兼容 ESM/CJS：避免使用 import.meta（仅 ESM 支持），统一用动态 import 加载 Hook
+    // Compatibility ESM/CJS: avoid using import.meta (ESM only), uniformly use dynamic import to load Hook
     var fsMod=await import("fs");
     var pathMod=await import("path");
     var osMod=await import("os");
@@ -1713,14 +1713,14 @@ try{
         }
     }
 }catch(e){
-    // 失败静默，避免影响启动
+    // Fail silently to avoid affecting startup
 }
 })();
-// ========== Cursor Hook Loader 结束 ==========
+// ========== Cursor Hook Loader End ==========
 
 '
 
-        # 在版权声明后注入代码
+        # Inject code after copyright notice
         local temp_file=$(mktemp)
         if grep -q '\*/' "$file"; then
             awk -v inject="$inject_code" '
@@ -1733,29 +1733,29 @@ try{
             }
             { print }
             ' "$file" > "$temp_file"
-            log_info "   ✓ [方案C] Loader Stub 已注入（版权声明后）"
+            log_info "   ✓ [Plan C] Loader Stub injected (after copyright notice)"
         else
             echo "$inject_code" > "$temp_file"
             cat "$file" >> "$temp_file"
-            log_info "   ✓ [方案C] Loader Stub 已注入（文件开头）"
+            log_info "   ✓ [Plan C] Loader Stub injected (file beginning)"
         fi
 
         if mv "$temp_file" "$file"; then
-            local summary="Hook加载器"
+            local summary="Hook loader"
             if [ "$replaced" = true ]; then
-                summary="someValue替换 + $summary"
+                summary="someValue replacement + $summary"
             fi
             if [ "$b6_patched" = true ]; then
-                summary="b6定点重写 + $summary"
+                summary="b6 fixed-point rewrite + $summary"
             fi
-            log_info "✅ [成功] 增强版方案修改成功（$summary）"
+            log_info "✅ [Success] Enhanced plan modification successful ($summary)"
             ((modified_count++))
             file_modification_status+=("'$(basename "$file")': Success")
 
             chmod u-w,go-w "$file" 2>/dev/null || true
             chown "$CURRENT_USER":"$CURRENT_GROUP" "$file" 2>/dev/null || true
         else
-            log_error "Hook注入失败 (无法移动临时文件)"
+            log_error "Hook injection failed (cannot move temp file)"
             rm -f "$temp_file"
             file_modification_status+=("'$(basename "$file")': Inject Failed")
             cp "$original_backup" "$file" 2>/dev/null || true
@@ -1763,42 +1763,42 @@ try{
 
     done
 
-    log_info "📊 [统计] JS 文件处理状态汇总:"
+    log_info "📊 [Stats] JS file processing status summary:"
     for status in "${file_modification_status[@]}"; do
         log_info "   - $status"
     done
 
     if [ "$modified_count" -eq 0 ]; then
-        log_error "❌ [失败] 未能成功修改任何JS文件。"
+        log_error "❌ [Failed] Failed to successfully modify any JS files."
         return 1
     fi
 
-    log_info "🎉 [完成] 成功修改 $modified_count 个JS文件"
-    log_info "💡 [说明] 使用增强版三重方案："
-    log_info "   • 方案A: someValue占位符替换（稳定锚点，跨版本兼容）"
-    log_info "   • 方案B: b6 定点重写（机器码源函数）"
-    log_info "   • 方案C: Loader Stub + 外置 Hook（cursor_hook.js）"
-    log_info "📁 [配置] ID 配置文件: $ids_config_path"
+    log_info "🎉 [Complete] Successfully modified $modified_count JS files"
+    log_info "💡 [Note] Using enhanced triple solution:"
+    log_info "   • Plan A: someValue placeholder replacement (stable anchor, cross-version compatible)"
+    log_info "   • Plan B: b6 fixed-point rewrite (machine code source function)"
+    log_info "   • Plan C: Loader Stub + external Hook (cursor_hook.js)"
+    log_info "📁 [Config] ID config file: $ids_config_path"
     return 0
 }
 
-# 禁用自动更新
+# Disable auto update
 disable_auto_update() {
-    log_info "正在尝试禁用 Cursor 自动更新..."
+    log_info "Attempting to disable Cursor auto update..."
     
-    # 查找可能的更新配置文件
+    # Find possible update config files
     local update_configs=()
-    # 用户配置目录下的
+    # Under user config directory
     if [ -d "$CURSOR_CONFIG_DIR" ]; then
         update_configs+=("$CURSOR_CONFIG_DIR/update-config.json")
-        update_configs+=("$CURSOR_CONFIG_DIR/settings.json") # 有些设置可能在这里
+        update_configs+=("$CURSOR_CONFIG_DIR/settings.json") # Some settings may be here
     fi
-    # 安装目录下的 (如果资源目录确定)
+    # Under installation directory (if resources directory is determined)
     if [ -n "$CURSOR_RESOURCES" ] && [ -d "$CURSOR_RESOURCES" ]; then
         update_configs+=("$CURSOR_RESOURCES/resources/app-update.yml")
-         update_configs+=("$CURSOR_RESOURCES/app-update.yml") # 可能的位置
+         update_configs+=("$CURSOR_RESOURCES/app-update.yml") # Possible location
     fi
-     # 标准安装目录下的
+     # Under standard installation directory
      if [ -d "$INSTALL_DIR" ]; then
           update_configs+=("$INSTALL_DIR/resources/app-update.yml")
           update_configs+=("$INSTALL_DIR/app-update.yml")
@@ -1809,111 +1809,111 @@ disable_auto_update() {
 
     local disabled_count=0
     
-    # 处理 JSON 配置文件
+    # Process JSON config files
     local json_config_pattern='update-config.json|settings.json'
     for config in "${update_configs[@]}"; do
        if [[ "$config" =~ $json_config_pattern ]] && [ -f "$config" ]; then
-           log_info "找到可能的更新配置文件: $config"
+           log_info "Found possible update config file: $config"
            
-           # 备份
+           # Backup
            cp "$config" "${config}.bak_$(date +%Y%m%d%H%M%S)" 2>/dev/null
            
-            # 尝试修改 JSON (如果存在且是 settings.json)
+            # Try to modify JSON (if exists and is settings.json)
             if [[ "$config" == *settings.json ]]; then
-                # 🔧 兼容修复：复用 modify_or_add_config 统一处理替换/注入，避免 sed -i 与 \n 扩展差异
+                # 🔧 Compatibility fix: reuse modify_or_add_config for unified replacement/injection handling, avoiding sed -i and \n expansion differences
                 if modify_or_add_config "update.mode" "none" "$config"; then
                     ((disabled_count++))
-                    log_info "已尝试在 '$config' 中设置 'update.mode' 为 'none'"
+                    log_info "Attempted to set 'update.mode' to 'none' in '$config'"
                 else
-                    log_warn "修改 settings.json 中的 update.mode 失败: $config"
+                    log_warn "Failed to modify update.mode in settings.json: $config"
                 fi
             elif [[ "$config" == *update-config.json ]]; then
-                 # 直接覆盖 update-config.json
+                 # Directly overwrite update-config.json
                  echo '{"autoCheck": false, "autoDownload": false}' > "$config"
-                 chown "$CURRENT_USER":"$CURRENT_GROUP" "$config" || log_warn "设置所有权失败: $config"
-                chmod 644 "$config" || log_warn "设置权限失败: $config"
+                 chown "$CURRENT_USER":"$CURRENT_GROUP" "$config" || log_warn "Failed to set ownership: $config"
+                chmod 644 "$config" || log_warn "Failed to set permissions: $config"
                 ((disabled_count++))
-                log_info "已覆盖更新配置文件: $config"
+                log_info "Overwritten update config file: $config"
             fi
        fi
     done
 
-    # 处理 YAML 配置文件
+    # Process YAML config files
      local yml_config_pattern='app-update.yml'
      for config in "${update_configs[@]}"; do
         if [[ "$config" =~ $yml_config_pattern ]] && [ -f "$config" ]; then
-            log_info "找到可能的更新配置文件: $config"
-            # 备份
+            log_info "Found possible update config file: $config"
+            # Backup
             cp "$config" "${config}.bak_$(date +%Y%m%d%H%M%S)" 2>/dev/null
-            # 清空或修改内容 (简单起见，直接清空或写入禁用标记)
+            # Clear or modify content (simply clear or write disable marker)
              echo "# Automatic updates disabled by script $(date)" > "$config"
-             # echo "provider: generic" > "$config" # 或者尝试修改 provider
+             # echo "provider: generic" > "$config" # Or try to modify provider
              # echo "url: http://127.0.0.1" >> "$config"
-             chmod 444 "$config" # 设置为只读
+             chmod 444 "$config" # Set to read-only
              ((disabled_count++))
-             log_info "已修改/清空更新配置文件: $config"
+             log_info "Modified/cleared update config file: $config"
         fi
      done
 
-    # 尝试查找updater可执行文件并禁用（重命名或移除权限）
+    # Try to find updater executable and disable it (rename or remove permissions)
     local updater_paths=()
      if [ -n "$CURSOR_RESOURCES" ] && [ -d "$CURSOR_RESOURCES" ]; then
-        # 兼容修复：不强依赖 find -executable，且兜底避免 find 非0 触发 set -e
+        # Compatibility fix: don't strongly depend on find -executable, and fallback to avoid find non-zero triggering set -e
         updater_paths+=($(find "$CURSOR_RESOURCES" -name "updater" -type f 2>/dev/null || true))
-        updater_paths+=($(find "$CURSOR_RESOURCES" -name "CursorUpdater" -type f 2>/dev/null || true)) # macOS 风格？
+        updater_paths+=($(find "$CURSOR_RESOURCES" -name "CursorUpdater" -type f 2>/dev/null || true)) # macOS style?
      fi
        if [ -d "$INSTALL_DIR" ]; then
           updater_paths+=($(find "$INSTALL_DIR" -name "updater" -type f 2>/dev/null || true))
           updater_paths+=($(find "$INSTALL_DIR" -name "CursorUpdater" -type f 2>/dev/null || true))
        fi
-       updater_paths+=("$CURSOR_CONFIG_DIR/updater") # 旧位置？
+       updater_paths+=("$CURSOR_CONFIG_DIR/updater") # Old location?
 
     for updater in "${updater_paths[@]}"; do
         if [ -f "$updater" ] && [ -x "$updater" ]; then
-            log_info "找到更新程序: $updater"
+            log_info "Found updater: $updater"
             local bak_updater="${updater}.bak_$(date +%Y%m%d%H%M%S)"
             if mv "$updater" "$bak_updater"; then
-                 log_info "已重命名更新程序为: $bak_updater"
+                 log_info "Renamed updater to: $bak_updater"
                  ((disabled_count++))
             else
-                 log_warn "重命名更新程序失败: $updater，尝试移除执行权限..."
+                 log_warn "Failed to rename updater: $updater, trying to remove execute permission..."
                  if chmod a-x "$updater"; then
-                      log_info "已移除更新程序执行权限: $updater"
+                      log_info "Removed updater execute permission: $updater"
                       ((disabled_count++))
                  else
-                     log_error "无法禁用更新程序: $updater"
+                     log_error "Unable to disable updater: $updater"
                  fi
             fi
-        # elif [ -d "$updater" ]; then # 如果是目录，尝试禁用
-        #     log_info "找到更新程序目录: $updater"
+        # elif [ -d "$updater" ]; then # If directory, try to disable
+        #     log_info "Found updater directory: $updater"
         #     touch "${updater}.disabled_by_script"
-        #     log_info "已标记禁用更新程序目录: $updater"
+        #     log_info "Marked updater directory as disabled: $updater"
         #     ((disabled_count++))
         fi
     done
     
     if [ "$disabled_count" -eq 0 ]; then
-        log_warn "未能找到或禁用任何已知的自动更新机制。"
-        log_warn "如果 Cursor 仍然自动更新，可能需要手动查找并禁用相关文件或设置。"
+        log_warn "Could not find or disable any known auto-update mechanisms."
+        log_warn "If Cursor still auto-updates, you may need to manually find and disable related files or settings."
     else
-        log_info "成功禁用或尝试禁用了 $disabled_count 个自动更新相关的文件/程序。"
+        log_info "Successfully disabled or attempted to disable $disabled_count auto-update related files/programs."
     fi
-     return 0 # 即使没找到，也认为函数执行成功
+     return 0 # Consider function successful even if nothing found
 }
 
-# 新增：通用菜单选择函数
+# New: Generic menu selection function
 select_menu_option() {
     local prompt="$1"
     IFS='|' read -ra options <<< "$2"
     local default_index=${3:-0}
     local selected_index=$default_index
     local key_input
-    local cursor_up=$'\e[A' # 更标准的 ANSI 码
+    local cursor_up=$'\e[A' # More standard ANSI code
     local cursor_down=$'\e[B'
-    local cursor_up_alt=$'\eOA' # 兼容应用光标模式
+    local cursor_up_alt=$'\eOA' # Compatible with application cursor mode
     local cursor_down_alt=$'\eOB'
     local enter_key=$'\n'
-    # 兼容管道执行场景：stdin 非 TTY 时改用 /dev/tty 读取
+    # Compatible with pipe execution: use /dev/tty when stdin is not TTY
     local input_fd=0
     local input_fd_opened=0
 
@@ -1924,111 +1924,111 @@ select_menu_option() {
         input_fd=3
         input_fd_opened=1
     else
-        # 无可用 TTY，直接使用默认选项返回
+        # No available TTY, return default option directly
         echo -e "$prompt ${GREEN}${options[$selected_index]}${NC}"
         return $selected_index
     fi
 
-    # 隐藏光标
+    # Hide cursor
     tput civis
-    # 清除可能存在的旧菜单行 (假设菜单最多 N 行)
+    # Clear possible old menu lines (assume menu has at most N lines)
     local num_options=${#options[@]}
-    for ((i=0; i<num_options+1; i++)); do echo -e "\033[K"; done # 清除行
-     tput cuu $((num_options + 1)) # 光标移回顶部
+    for ((i=0; i<num_options+1; i++)); do echo -e "\033[K"; done # Clear line
+     tput cuu $((num_options + 1)) # Move cursor back to top
 
 
-    # 显示提示信息
+    # Display prompt
     echo -e "$prompt"
     
-    # 绘制菜单函数
+    # Draw menu function
     draw_menu() {
-        # 光标移到菜单开始行下方一行
+        # Move cursor to one line below menu start row
         tput cud 1 
         for i in "${!options[@]}"; do
-             tput el # 清除当前行
+             tput el # Clear current line
             if [ $i -eq $selected_index ]; then
                 echo -e " ${GREEN}►${NC} ${options[$i]}"
             else
                 echo -e "   ${options[$i]}"
             fi
         done
-         # 将光标移回提示行下方
+         # Move cursor back below prompt row
         tput cuu "$num_options"
     }
     
-    # 第一次显示菜单
+    # Display menu for first time
     draw_menu
 
-    # 循环处理键盘输入
+    # Loop to process keyboard input
     while true; do
-        # 读取按键 (使用 -sn1 或 -sn3 取决于系统对箭头键的处理)
-        # -N 1 读取单个字符，可能需要多次读取箭头键
-        # -N 3 一次读取3个字符，通常用于箭头键
-        read -rsn1 -u "$input_fd" key_press_1 # 读取第一个字符
-         if [[ "$key_press_1" == $'\e' ]]; then # 如果是 ESC，读取后续字符
-             read -rsn2 -u "$input_fd" key_press_2 # 读取 '[' 和 A/B
+        # Read key (use -sn1 or -sn3 depending on system arrow key handling)
+        # -N 1 read single character, may need multiple reads for arrow keys
+        # -N 3 read 3 characters at once, usually for arrow keys
+        read -rsn1 -u "$input_fd" key_press_1 # Read first character
+         if [[ "$key_press_1" == $'\e' ]]; then # If ESC, read subsequent characters
+             read -rsn2 -u "$input_fd" key_press_2 # Read '[' and A/B
              key_input="$key_press_1$key_press_2"
-         elif [[ "$key_press_1" == "" ]]; then # 如果是 Enter
+         elif [[ "$key_press_1" == "" ]]; then # If Enter
              key_input=$enter_key
          else
-             key_input="$key_press_1" # 其他按键
+             key_input="$key_press_1" # Other keys
          fi
 
-        # 检测按键
+        # Detect key press
         case "$key_input" in
-            # 上箭头键
+            # Up arrow key
             "$cursor_up"|"$cursor_up_alt")
                 if [ $selected_index -gt 0 ]; then
                     ((selected_index--))
                     draw_menu
                 fi
                 ;;
-            # 下箭头键
+            # Down arrow key
             "$cursor_down"|"$cursor_down_alt")
                 if [ $selected_index -lt $((${#options[@]}-1)) ]; then
                     ((selected_index++))
                     draw_menu
                 fi
                 ;;
-            # 数字键选择（1..N），避免方向键不可用
+            # Number key selection (1..N), in case arrow keys not available
             [1-9])
                 if [ "$key_input" -ge 1 ] && [ "$key_input" -le "$num_options" ]; then
                     selected_index=$((key_input - 1))
                     draw_menu
                 fi
                 ;;
-            # Enter键
+            # Enter key
             "$enter_key")
-                 # 清除菜单区域
-                 tput cud 1 # 下移一行开始清除
+                 # Clear menu area
+                 tput cud 1 # Move down one line to start clearing
                  for i in "${!options[@]}"; do tput el; tput cud 1; done
-                 tput cuu $((num_options + 1)) # 移回提示行
-                 tput el # 清除提示行本身
-                 echo -e "$prompt ${GREEN}${options[$selected_index]}${NC}" # 显示最终选择
+                 tput cuu $((num_options + 1)) # Move back to prompt line
+                 tput el # Clear prompt line itself
+                 echo -e "$prompt ${GREEN}${options[$selected_index]}${NC}" # Display final selection
 
-                 # 恢复光标
+                 # Restore cursor
                  tput cnorm
-                 # 关闭 /dev/tty 句柄，避免资源占用
+                 # Close /dev/tty handle to avoid resource occupation
                  if [ "$input_fd_opened" -eq 1 ]; then
                      exec 3<&-
                  fi
-                 # 返回选择的索引
+                 # Return selected index
                  return $selected_index
                 ;;
              *)
-                 # 忽略其他按键
+                 # Ignore other keys
                  ;;
         esac
     done
 }
 
-# 新增 Cursor 初始化清理函数
+# New: Cursor initialization cleanup function
 cursor_initialize_cleanup() {
-    log_info "正在执行 Cursor 初始化清理..."
-    # CURSOR_CONFIG_DIR 在脚本全局已定义: $TARGET_HOME/.config/Cursor
+    log_info "Executing Cursor initialization cleanup..."
+    # CURSOR_CONFIG_DIR defined globally in script: $TARGET_HOME/.config/Cursor
     local USER_CONFIG_BASE_PATH="$CURSOR_CONFIG_DIR/User"
 
-    log_debug "用户配置基础路径: $USER_CONFIG_BASE_PATH"
+    log_debug "User config base path: $USER_CONFIG_BASE_PATH"
 
     local files_to_delete=(
         "$USER_CONFIG_BASE_PATH/globalStorage/state.vscdb"
@@ -2038,73 +2038,73 @@ cursor_initialize_cleanup() {
     local folder_to_clean_contents="$USER_CONFIG_BASE_PATH/History"
     local folder_to_delete_completely="$USER_CONFIG_BASE_PATH/workspaceStorage"
 
-    # 删除指定文件
+    # Delete specified files
     for file_path in "${files_to_delete[@]}"; do
-        log_debug "检查文件: $file_path"
+        log_debug "Checking file: $file_path"
         if [ -f "$file_path" ]; then
             if rm -f "$file_path"; then
-                log_info "已删除文件: $file_path"
+                log_info "Deleted file: $file_path"
             else
-                log_error "删除文件 $file_path 失败"
+                log_error "Failed to delete file $file_path"
             fi
         else
-            log_warn "文件不存在，跳过删除: $file_path"
+            log_warn "File does not exist, skipping deletion: $file_path"
         fi
     done
 
-    # 清空指定文件夹内容
-    log_debug "检查待清空文件夹: $folder_to_clean_contents"
+    # Clear specified folder contents
+    log_debug "Checking folder to clear: $folder_to_clean_contents"
     if [ -d "$folder_to_clean_contents" ]; then
         if find "$folder_to_clean_contents" -mindepth 1 -delete; then
-            log_info "已清空文件夹内容: $folder_to_clean_contents"
+            log_info "Cleared folder contents: $folder_to_clean_contents"
         else
             if [ -z "$(ls -A "$folder_to_clean_contents")" ]; then
-                 log_info "文件夹 $folder_to_clean_contents 现在为空。"
+                 log_info "Folder $folder_to_clean_contents is now empty."
             else
-                 log_error "清空文件夹 $folder_to_clean_contents 内容失败 (部分或全部)。请检查权限或手动删除。"
+                 log_error "Failed to clear folder $folder_to_clean_contents contents (partially or completely). Please check permissions or delete manually."
             fi
         fi
     else
-        log_warn "文件夹不存在，跳过清空: $folder_to_clean_contents"
+        log_warn "Folder does not exist, skipping clear: $folder_to_clean_contents"
     fi
 
-    # 删除指定文件夹及其内容
-    log_debug "检查待删除文件夹: $folder_to_delete_completely"
+    # Delete specified folder and its contents
+    log_debug "Checking folder to delete: $folder_to_delete_completely"
     if [ -d "$folder_to_delete_completely" ]; then
         if rm -rf "$folder_to_delete_completely"; then
-            log_info "已删除文件夹: $folder_to_delete_completely"
+            log_info "Deleted folder: $folder_to_delete_completely"
         else
-            log_error "删除文件夹 $folder_to_delete_completely 失败"
+            log_error "Failed to delete folder $folder_to_delete_completely"
         fi
     else
-        log_warn "文件夹不存在，跳过删除: $folder_to_delete_completely"
+        log_warn "Folder does not exist, skipping deletion: $folder_to_delete_completely"
     fi
 
-    log_info "Cursor 初始化清理完成。"
+    log_info "Cursor initialization cleanup complete."
 }
 
-# 主函数
+# Main function
 main() {
-    # 在显示菜单/流程说明前调整终端窗口大小；不支持则静默忽略
+    # Adjust terminal window size before displaying menu/process instructions; silently ignore if not supported
     if [ -z "${CURSOR_NO_TTY_UI:-}" ]; then
         try_resize_terminal_window
     fi
 
-    # 初始化日志文件
+    # Initialize log file
     initialize_log
-    log_info "脚本启动..."
-    log_info "运行用户: $CURRENT_USER (脚本以 EUID=$EUID 运行)"
+    log_info "Script starting..."
+    log_info "Running user: $CURRENT_USER (script running as EUID=$EUID)"
 
-    # 检查权限 (必须在脚本早期)
-    check_permissions # 需要 root 权限进行安装和修改系统文件
+    # Check permissions (must be early in script)
+    check_permissions # Requires root privileges for installation and modifying system files
 
-    # 记录系统信息
-    log_info "系统信息: $(uname -a)"
-    log_cmd_output "lsb_release -a 2>/dev/null || cat /etc/*release 2>/dev/null || cat /etc/issue" "系统版本信息"
+    # Record system info
+    log_info "System info: $(uname -a)"
+    log_cmd_output "lsb_release -a 2>/dev/null || cat /etc/*release 2>/dev/null || cat /etc/issue" "System version info"
     
     if [ -z "${CURSOR_NO_TTY_UI:-}" ]; then
         clear
-        # 显示 Logo
+        # Display Logo
         echo -e "
         ██████╗██╗   ██╗██████╗ ███████╗ ██████╗ ██████╗ 
        ██╔════╝██║   ██║██╔══██╗██╔════╝██╔═══██╗██╔══██╗
@@ -2114,111 +2114,111 @@ main() {
         ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝
         "
         echo -e "${BLUE}=====================================================${NC}"
-        echo -e "${GREEN}         Cursor Linux 启动与修改工具（免费）            ${NC}"
-        echo -e "${YELLOW}        关注公众号【煎饼果子卷AI】     ${NC}"
-        echo -e "${YELLOW}  一起交流更多Cursor技巧和AI知识(脚本免费、关注公众号加群有更多技巧和大佬)  ${NC}"
+        echo -e "${GREEN}         Cursor Linux Launcher and Modifier (Free)            ${NC}"
+        echo -e "${YELLOW}        Follow WeChat Official Account: 【煎饼果子卷AI】     ${NC}"
+        echo -e "${YELLOW}  Exchange more Cursor tips and AI knowledge (script is free, follow the account to join group for more tips and experts)  ${NC}"
         echo -e "${BLUE}=====================================================${NC}"
         echo
-        echo -e "${YELLOW}⚡  [小小广告] Cursor官网正规成品号：Unlimited ♾️ ¥1050 | 7天周卡 $100 ¥210 | 7天周卡 $500 ¥1050 | 7天周卡 $1000 ¥2450 | 全部7天质保 | ，WeChat：JavaRookie666  ${NC}"
+        echo -e "${YELLOW}⚡  [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  ${NC}"
         echo
-        echo -e "${YELLOW}[提示]${NC} 本工具旨在修改 Cursor 以解决可能的启动问题或设备限制。"
-        echo -e "${YELLOW}[提示]${NC} 它将优先修改 JS 文件，并可选择重置设备ID和禁用自动更新。"
-        echo -e "${YELLOW}[提示]${NC} 如果未找到 Cursor，将尝试从 '$APPIMAGE_SEARCH_DIR' 目录安装。"
+        echo -e "${YELLOW}[Tip]${NC} This tool is designed to modify Cursor to resolve possible startup issues or device limits."
+        echo -e "${YELLOW}[Tip]${NC} It will prioritize modifying JS files, and optionally reset device ID and disable auto-update."
+        echo -e "${YELLOW}[Tip]${NC} If Cursor is not found, it will try to install from AppImage files in '$APPIMAGE_SEARCH_DIR' directory."
         echo
     fi
 
-    # 查找 Cursor 路径
+    # Find Cursor path
     if ! find_cursor_path; then
-        log_warn "系统中未找到现有的 Cursor 安装。"
+        log_warn "No existing Cursor installation found in system."
         set +e
-        select_menu_option "是否尝试从 '$APPIMAGE_SEARCH_DIR' 目录中的 AppImage 文件安装 Cursor？" "是，安装 Cursor|否，退出脚本" 0
+        select_menu_option "Try to install Cursor from AppImage files in '$APPIMAGE_SEARCH_DIR' directory?" "Yes, install Cursor|No, exit script" 0
         install_choice=$?
         set -e
         
         if [ "$install_choice" -eq 0 ]; then
             if ! install_cursor_appimage; then
-                log_error "Cursor 安装失败，请检查上面的日志。脚本将退出。"
+                log_error "Cursor installation failed, please check logs above. Script will exit."
                 exit 1
             fi
-            # 安装成功后，重新查找路径
+            # After successful installation, re-find paths
             if ! find_cursor_path || ! find_cursor_resources; then
-                 log_error "安装后仍然无法找到 Cursor 的可执行文件或资源目录。请检查 '$INSTALL_DIR' 和 '/usr/local/bin/cursor'。脚本退出。"
+                 log_error "Still cannot find Cursor executable or resource directory after installation. Please check '$INSTALL_DIR' and '/usr/local/bin/cursor'. Script exiting."
                  exit 1
             fi
-            log_info "Cursor 安装成功，继续执行修改步骤..."
+            log_info "Cursor installed successfully, continuing with modification steps..."
         else
-            log_info "用户选择不安装 Cursor，脚本退出。"
+            log_info "User chose not to install Cursor, script exiting."
             exit 0
         fi
     else
-        # 如果找到了 Cursor，也要确保找到资源目录
+        # If Cursor found, also ensure resource directory is found
         if ! find_cursor_resources; then
-            log_error "找到了 Cursor 可执行文件 ($CURSOR_PATH)，但未能定位资源目录。"
-            log_error "无法继续修改 JS 文件。请检查 Cursor 安装是否完整。脚本退出。"
+            log_error "Found Cursor executable ($CURSOR_PATH), but could not locate resource directory."
+            log_error "Cannot continue modifying JS files. Please check if Cursor installation is complete. Script exiting."
             exit 1
         fi
-        log_info "发现已安装的 Cursor ($CURSOR_PATH)，资源目录 ($CURSOR_RESOURCES)。"
+        log_info "Found installed Cursor ($CURSOR_PATH), resource directory ($CURSOR_RESOURCES)."
     fi
 
-    # 到这里，Cursor 应该已安装并且路径已知
+    # At this point, Cursor should be installed and paths known
 
-    # 检查并关闭Cursor进程
+    # Check and close Cursor process
     if ! check_and_kill_cursor; then
-         # check_and_kill_cursor 内部会记录错误并退出，但以防万一
+         # check_and_kill_cursor logs errors and exits internally, but just in case
          exit 1
     fi
     
-    # 执行 Cursor 初始化清理
+    # Execute Cursor initialization cleanup
     # cursor_initialize_cleanup
 
-    # 备份并处理配置文件 (机器码重置选项)
+    # Backup and process config file (machine code reset option)
     if ! generate_new_config; then
-         log_error "处理配置文件时出错，脚本中止。"
-         # 此处可能需要考虑是否回滚JS修改（如果已执行）？目前不回滚。
+         log_error "Error processing config file, script aborted."
+         # May need to consider rolling back JS modifications (if already executed)? Currently not rolling back.
          exit 1
     fi
     
-    # 修改JS文件
-    log_info "正在修改 Cursor JS 文件..."
+    # Modify JS files
+    log_info "Modifying Cursor JS files..."
     if ! modify_cursor_js_files; then
-        log_error "JS 文件修改过程中发生错误。"
-        log_warn "配置文件可能已被修改，但 JS 文件修改失败。"
-        log_warn "如果重启后 Cursor 行为异常或仍有问题，请检查日志并考虑手动恢复备份或重新运行脚本。"
-        # 决定是否继续执行禁用更新？通常建议继续
-        # exit 1 # 或者选择退出
+        log_error "Error occurred during JS file modification."
+        log_warn "Config file may have been modified, but JS file modification failed."
+        log_warn "If Cursor behaves abnormally or still has issues after restart, please check logs and consider manually restoring backup or rerunning the script."
+        # Decide whether to continue with disable update? Usually recommend continuing
+        # exit 1 # or choose to exit
     else
-        log_info "JS 文件修改成功！"
+        log_info "JS file modification successful!"
     fi
     
-    # 禁用自动更新
+    # Disable auto update
     if ! disable_auto_update; then
-        # disable_auto_update 内部会记录警告，不视为致命错误
-        log_warn "尝试禁用自动更新时遇到问题（详见日志），但脚本将继续。"
+        # disable_auto_update logs warnings internally, not considered fatal error
+        log_warn "Encountered issues while trying to disable auto update (see logs for details), but script will continue."
     fi
     
-    log_info "所有修改步骤已完成！"
-    log_info "请启动 Cursor 以应用更改。"
+    log_info "All modification steps completed!"
+    log_info "Please launch Cursor to apply changes."
     
-    # 显示最后的提示信息
+    # Display final prompt information
     echo
     echo -e "${GREEN}=====================================================${NC}"
-    echo -e "${YELLOW}  请关注公众号【煎饼果子卷AI】获取更多技巧和交流 ${NC}"
-    echo -e "${YELLOW}⚡   [小小广告] Cursor官网正规成品号：Unlimited ♾️ ¥1050 | 7天周卡 $100 ¥210 | 7天周卡 $500 ¥1050 | 7天周卡 $1000 ¥2450 | 全部7天质保 | ，WeChat：JavaRookie666  ${NC}"
+    echo -e "${YELLOW}  Please follow WeChat Official Account 【煎饼果子卷AI】 for more tips and communication ${NC}"
+    echo -e "${YELLOW}⚡   [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  ${NC}"
     echo -e "${GREEN}=====================================================${NC}"
     echo
     
-    # 记录脚本完成信息
-    log_info "脚本执行完成"
-    echo "========== Cursor ID 修改工具日志结束 $(date) ==========" >> "$LOG_FILE"
+    # Record script completion info
+    log_info "Script execution completed"
+    echo "========== Cursor ID Modifier Log End $(date) ==========" >> "$LOG_FILE"
     
-    # 显示日志文件位置
+    # Display log file location
     echo
-    log_info "详细日志已保存到: $LOG_FILE"
-    echo "如遇问题请将此日志文件提供给开发者以协助排查"
+    log_info "Detailed log saved to: $LOG_FILE"
+    echo "If you encounter issues, please provide this log file to developers for troubleshooting assistance"
     echo
 }
 
-# 执行主函数
+# Execute main function
 main
 
-exit 0 # 确保最后返回成功状态码
+exit 0 # Ensure final successful return status code
