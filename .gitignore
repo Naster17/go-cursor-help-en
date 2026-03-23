@@ -44,3 +44,6 @@ coverage.txt
 .cunzhi*/
 .sanshu*/
 docs/
+
+# Qoder IDE
+.qoder/
