@@ -1980,12 +1980,8 @@ Write-Host @"
 
 "@
 Write-Host "================================$NC"
-Write-Host "$GREEN🚀   Cursor Trial Reset Pro Tool          $NC"
-Write-Host "$YELLOW📱  Follow WeChat Official Account: 【煎饼果子卷AI】 $NC"
-Write-Host "$YELLOW🤝  Exchange more Cursor tips and AI knowledge (script is free, follow the account to join group for more tips and experts)  $NC"
-Write-Host "$YELLOW💡  [Important Notice] This tool is free, if it helps you, please follow the WeChat Official Account 【煎饼果子卷AI】  $NC"
-Write-Host ""
-Write-Host "$YELLOW⚡  [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  $NC"
+Write-Host "$GREEN🚀   Cursor Trial Reset Tool          $NC"
+Write-Host "$YELLOW💡  This tool is free and open source$NC"
 Write-Host "================================$NC"
 
 # 🎯 User selection menu
@@ -2490,17 +2486,11 @@ if ($executeMode -eq "MODIFY_ONLY") {
 }
 
 
-# 📱 Display WeChat Official Account info
 Write-Host ""
 Write-Host "$GREEN================================$NC"
-Write-Host "$YELLOW📱  Follow WeChat Official Account 【煎饼果子卷AI】 to exchange more Cursor tips and AI knowledge (script is free, follow the account to join group for more tips and experts)  $NC"
-Write-Host "$YELLOW⚡   [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  $NC"
+Write-Host "$GREEN🎉 [Script Complete]$NC Thank you for using the Cursor Trial Reset Tool!"
+Write-Host "$YELLOW💡  This tool is free and open source$NC"
 Write-Host "$GREEN================================$NC"
-Write-Host ""
-
-# 🎉 Script execution complete
-Write-Host "$GREEN🎉 [Script Complete]$NC Thank you for using the Cursor Machine Code Modifier Tool!"
-Write-Host "💡 [Tip]$NC If you have any issues, please refer to the WeChat Official Account or rerun the script"
 Write-Host ""
 Read-Host "Press Enter to exit"
 exit 0

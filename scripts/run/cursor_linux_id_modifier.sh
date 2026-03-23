@@ -2115,11 +2115,8 @@ main() {
         "
         echo -e "${BLUE}=====================================================${NC}"
         echo -e "${GREEN}         Cursor Linux Launcher and Modifier (Free)            ${NC}"
-        echo -e "${YELLOW}        Follow WeChat Official Account: 【煎饼果子卷AI】     ${NC}"
-        echo -e "${YELLOW}  Exchange more Cursor tips and AI knowledge (script is free, follow the account to join group for more tips and experts)  ${NC}"
+        echo -e "${YELLOW}        This tool is free and open source     ${NC}"
         echo -e "${BLUE}=====================================================${NC}"
-        echo
-        echo -e "${YELLOW}⚡  [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  ${NC}"
         echo
         echo -e "${YELLOW}[Tip]${NC} This tool is designed to modify Cursor to resolve possible startup issues or device limits."
         echo -e "${YELLOW}[Tip]${NC} It will prioritize modifying JS files, and optionally reset device ID and disable auto-update."
@@ -2202,8 +2199,8 @@ main() {
     # Display final prompt information
     echo
     echo -e "${GREEN}=====================================================${NC}"
-    echo -e "${YELLOW}  Please follow WeChat Official Account 【煎饼果子卷AI】 for more tips and communication ${NC}"
-    echo -e "${YELLOW}⚡   [Small Ad] Cursor Official Website Regular Accounts: Unlimited ♾️ ¥1050 | 7-day weekly card $100 ¥210 | 7-day weekly card $500 ¥1050 | 7-day weekly card $1000 ¥2450 | All with 7-day warranty | , WeChat: JavaRookie666  ${NC}"
+    echo -e "${GREEN}  Script execution completed successfully ${NC}"
+    echo -e "${YELLOW}  This tool is free and open source ${NC}"
     echo -e "${GREEN}=====================================================${NC}"
     echo
     
